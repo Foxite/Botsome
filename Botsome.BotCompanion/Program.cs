@@ -52,7 +52,7 @@ _ = Task.Run(async () => {
 discord.MessageCreated += async (o, e) => {
 	if (emoteRegex.IsMatch(e.Message.Content)) {
 		Console.WriteLine(e.Message.Content);
-		HttpResponseMessage msg = await http.PostAsync(coordinatorUrl + $"/Botsome?id={sessionGuid}", new StringContent(JsonConvert.SerializeObject(new BotsomeEvent(e.Guild?.Id, e.Channel.Id, e.Message.Id)), Encoding.UTF8, "application/json"));
+		HttpResponseMessage msg = await http.PostAsync(coordinatorUrl + $"/Botsome?id={sessionGuid}", new StringContent(JsonConvert.SerializeObject(new BotsomeEvent(e.Channel.Id, e.Message.Id)), Encoding.UTF8, "application/json"));
 		msg.EnsureSuccessStatusCode();
 	}
 };

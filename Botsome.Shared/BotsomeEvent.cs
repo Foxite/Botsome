@@ -1,3 +1,3 @@
 ﻿namespace Shared;
 
-public record BotsomeEvent(ulong? GuildId, ulong ChannelId, ulong MessageId);
+public record BotsomeEvent(ulong ChannelId, ulong MessageId);
