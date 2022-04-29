@@ -1,4 +1,4 @@
-name: Build Coordinator
+name: Build BotCompanion
 
 on:
   push:
