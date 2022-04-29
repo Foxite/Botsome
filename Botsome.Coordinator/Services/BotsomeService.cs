@@ -1,80 +1,85 @@
 using System.Collections.Concurrent;
+using System.IO.Pipelines;
+using System.Timers;
+using Newtonsoft.Json;
 using Shared;
+using Timer = System.Timers.Timer;
 
 namespace Botsome.Coordinator; 
 
 public class BotsomeService {
-	public event EventHandler<BotsomeEvent> Botsome;
-
-	public IAsyncEnumerable<BotsomeEvent> OpenStream() {
-		return new AsyncEnumeratorWrapper<BotsomeEvent>(ct => new BotsomeStreamContext(this, ct));
-	}
-
-	public void OnBotsome(BotsomeEvent evt) {
-		Botsome?.Invoke(this, evt);
-	}
-
-	public void SubscribeContext(BotsomeStreamContext ctx) {
-		Botsome += ctx.OnBotsome;
-	}
+	private readonly ILogger<BotsomeService> m_Logger;
+	private readonly Random m_Random;
+	private readonly Timer m_HeartbeatTimer;
+	// TODO Not sure if these pipes ever actually get disposed in every scenario
+	private readonly ConcurrentDictionary<Guid, Pipe> m_OutgoingStreams = new();
+	private readonly ConcurrentDictionary<BotsomeEvent, BotsomeReports> m_IncomingReports = new();
 	
-	public void UnsubscribeContext(BotsomeStreamContext ctx) {
-		Botsome += ctx.OnBotsome;
+	public BotsomeService(ILogger<BotsomeService> logger, Random random) {
+		m_Logger = logger;
+		m_Random = random;
+		m_HeartbeatTimer = new Timer();
+		m_HeartbeatTimer.Interval = 10_000;
+		m_HeartbeatTimer.AutoReset = true;
+		m_HeartbeatTimer.Elapsed += (o, e) => {
+			foreach (var pipe in m_OutgoingStreams) {
+				using var sw = new StreamWriter(pipe.Value.Writer.AsStream(), leaveOpen: true);
+				sw.WriteLine();
+				sw.Flush();
+			}
+		};
+		m_HeartbeatTimer.Start();
 	}
 
-	public class BotsomeStreamContext : IAsyncEnumerator<BotsomeEvent> {
-		private readonly object m_Monitor = new();
+	public Stream OpenStream(Guid id) {
+		var pipe = new Pipe();
+		m_OutgoingStreams[id] = pipe;
+		var stream = new DisposalNotifyingStream<Guid>(pipe.Reader.AsStream(), id);
+		stream.Disposing += (sender, guid) => m_OutgoingStreams.TryRemove(guid, out _);
+		return stream;
+	}
+
+	public void OnBotsome(BotsomeEvent evt, Guid id) {
+		m_IncomingReports.GetOrAdd(evt, be => new BotsomeReports(this, be)).Guids.Add(id);
+	}
+
+	private void OnExpired(BotsomeReports reports) {
+		m_IncomingReports.TryRemove(reports.Event, out _);
+		Guid chosenId = reports.Guids[m_Random.Next(0, reports.Guids.Count)];
+		if (m_OutgoingStreams.TryGetValue(chosenId, out Pipe? pipe)) {
+			using (var sw = new StreamWriter(pipe.Writer.AsStream(), leaveOpen: true)) {
+				sw.WriteLine(JsonConvert.SerializeObject(reports.Event, Formatting.None));
+				sw.Flush();
+			}
+
+			pipe.Writer.AsStream().Flush();
+		} else {
+			m_Logger.LogCritical("Client is reporting but not listening {guid} {event}", chosenId, reports.Event);
+		}
+	}
+
+	private class BotsomeReports {
 		private readonly BotsomeService m_Service;
-		private readonly CancellationToken m_CancellationToken;
-		private readonly ConcurrentQueue<BotsomeEvent> m_Queue = new();
-		private bool m_Disposed = false;
+		private readonly Timer m_Timer;
+		
+		public BotsomeEvent Event { get; }
+		public List<Guid> Guids { get; }
 
-		public BotsomeEvent Current { get; private set; } = null!;
-
-		public BotsomeStreamContext(BotsomeService service, CancellationToken cancellationToken) {
+		public BotsomeReports(BotsomeService service, BotsomeEvent evt) {
+			Guids = new List<Guid>(10);
+			Event = evt;
 			m_Service = service;
-			m_CancellationToken = cancellationToken;
+			m_Timer = new Timer();
+			m_Timer.Interval = 3_000;
+			m_Timer.AutoReset = false;
+			m_Timer.Elapsed += Elapsed;
+			m_Timer.Start();
 		}
 
-		public void OnBotsome(object? sender, BotsomeEvent evt) {
-			m_Queue.Enqueue(evt);
-			Monitor.Pulse(m_Monitor);
-		}
-	
-		public async ValueTask<bool> MoveNextAsync() {
-			lock (m_Monitor) {
-				BotsomeEvent? evt;
-				
-				if (m_Disposed) {
-					return false;
-				}
-				if (m_Queue.TryPeek(out evt)) {
-					Current = evt;
-					return true;
-				} else {
-					// TODO cancellationtoken
-					// TODO make actually async
-					Monitor.Wait(m_Monitor);
-					
-					if (m_Disposed) {
-						return false;
-					}
-					if (m_Queue.TryPeek(out evt)) {
-						Current = evt;
-						return true;
-					}
-					throw new Exception("Should never happen");
-				}
-			}
-		}
-	
-		public ValueTask DisposeAsync() {
-			m_Service.UnsubscribeContext(this);
-			lock (m_Monitor) {
-				m_Disposed = true;
-				Monitor.Pulse(m_Monitor);
-			}
-			return default;
+		private void Elapsed(object? sender, ElapsedEventArgs e) {
+			m_Timer.Elapsed -= Elapsed;
+			m_Timer.Dispose();
+			m_Service.OnExpired(this);
 		}
 	}
 }

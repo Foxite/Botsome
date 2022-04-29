@@ -15,12 +15,12 @@ public class BotsomeController : ControllerBase {
 	}
 
 	[HttpPost]
-	public void Report([FromBody] BotsomeEvent evt) {
-		m_Service.OnBotsome(evt);
+	public void Report([FromBody] BotsomeEvent evt, [FromQuery] Guid id) {
+		m_Service.OnBotsome(evt, id);
 	}
 
 	[HttpGet]
-	public IAsyncEnumerable<BotsomeEvent> Stream() {
-		return m_Service.OpenStream();
+	public IActionResult Stream([FromQuery] Guid id) {
+		return File(m_Service.OpenStream(id), "application/json");
 	}
 }

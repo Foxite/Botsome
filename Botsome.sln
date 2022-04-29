@@ -4,7 +4,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Botsome.Coordinator", "Bots
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Botsome.BotCompanion", "Botsome.BotCompanion\Botsome.BotCompanion.csproj", "{DA3F60F9-869C-4C2A-AE3A-DD3DA2DEA7D6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{70E9DC53-3F5B-4930-8688-F67F09AF3C8F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Botsome.Shared", "Botsome.Shared\Botsome.Shared.csproj", "{70E9DC53-3F5B-4930-8688-F67F09AF3C8F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -8,12 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Ndjson.AsyncStreams.AspNetCore.Mvc.NewtonsoftJson" Version="1.3.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Shared\Shared.csproj" />
+      <ProjectReference Include="..\Botsome.Shared\Botsome.Shared.csproj" />
     </ItemGroup>
 
 </Project>
