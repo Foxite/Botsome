@@ -22,10 +22,12 @@ public class BotsomeService {
 		m_HeartbeatTimer.Interval = 10_000;
 		m_HeartbeatTimer.AutoReset = true;
 		m_HeartbeatTimer.Elapsed += (o, e) => {
-			foreach (var pipe in m_OutgoingStreams) {
-				using var sw = new StreamWriter(pipe.Value.Writer.AsStream(), leaveOpen: true);
-				sw.WriteLine();
-				sw.Flush();
+			foreach ((_, Pipe? pipe) in m_OutgoingStreams) {
+				lock (pipe.Writer) {
+					using var sw = new StreamWriter(pipe.Writer.AsStream(), leaveOpen: true);
+					sw.WriteLine();
+					sw.Flush();
+				}
 			}
 		};
 		m_HeartbeatTimer.Start();
@@ -47,12 +49,11 @@ public class BotsomeService {
 		m_IncomingReports.TryRemove(reports.Event, out _);
 		Guid chosenId = reports.Guids[m_Random.Next(0, reports.Guids.Count)];
 		if (m_OutgoingStreams.TryGetValue(chosenId, out Pipe? pipe)) {
-			using (var sw = new StreamWriter(pipe.Writer.AsStream(), leaveOpen: true)) {
+			lock (pipe.Writer) {
+				using var sw = new StreamWriter(pipe.Writer.AsStream(), leaveOpen: true);
 				sw.WriteLine(JsonConvert.SerializeObject(reports.Event, Formatting.None));
 				sw.Flush();
 			}
-
-			pipe.Writer.AsStream().Flush();
 		} else {
 			m_Logger.LogCritical("Client is reporting but not listening {guid} {event}", chosenId, reports.Event);
 		}
