@@ -50,8 +50,8 @@ _ = Task.Run(async () => {
 });
 
 discord.MessageCreated += async (o, e) => {
-	if (emoteRegex.IsMatch(e.Message.Content)) {
-		Console.WriteLine(e.Message.Content);
+	Match match = emoteRegex.Match(e.Message.Content);
+	if (match.Success && match.Groups["id"].Value == emoteId.ToString()) {
 		HttpResponseMessage msg = await http.PostAsync(coordinatorUrl + $"/Botsome?id={sessionGuid}", new StringContent(JsonConvert.SerializeObject(new BotsomeEvent(e.Channel.Id, e.Message.Id)), Encoding.UTF8, "application/json"));
 		msg.EnsureSuccessStatusCode();
 	}
