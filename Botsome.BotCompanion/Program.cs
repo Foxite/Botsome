@@ -6,10 +6,10 @@ using DSharpPlus.Entities;
 using Newtonsoft.Json;
 using Shared;
 
-static string Envvar(string name) => Environment.GetEnvironmentVariable(name) ?? throw new InvalidOperationException($"Envvar {name} is not set");
+static string Envvar(string name, string? def = null) => Environment.GetEnvironmentVariable(name) ?? def ?? throw new InvalidOperationException($"Envvar {name} is not set");
 
 string coordinatorUrl = Envvar("COORDINATOR_URL");
-string botToken = Envvar("BOT_TOKEN");
+string botToken = Envvar(Envvar("BOT_TOKEN_ENVVAR", "BOT_TOKEN"));
 ulong emoteId = ulong.Parse(Envvar("EMOTE"));
 
 var sessionGuid = Guid.NewGuid();
