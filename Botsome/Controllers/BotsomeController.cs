@@ -1,26 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
-using Shared;
 
-namespace Botsome.Coordinator;
+namespace Botsome;
 
 [ApiController]
 [Route("[controller]")]
 public class BotsomeController : ControllerBase {
 	private readonly ILogger<BotsomeController> m_Logger;
-	private readonly ClientService m_Service;
+	private readonly ClientService m_ClientService;
 
-	public BotsomeController(ILogger<BotsomeController> logger, BotsomeService service) {
+	public BotsomeController(ILogger<BotsomeController> logger, ClientService clientService) {
 		m_Logger = logger;
-		m_Service = service;
+		m_ClientService = clientService;
 	}
 
-	[HttpPost]
-	public void Report([FromBody] BotsomeEvent evt, [FromQuery] Guid id) {
-		m_Service.OnBotsome(evt, id);
-	}
-
-	[HttpGet]
-	public IActionResult Stream([FromQuery] Guid id) {
-		return File(m_Service.OpenStream(id), "application/json");
+	[HttpPatch]
+	public Task Put([FromForm] string[] botStrings) {
+		return m_ClientService.UpdateList(botStrings.Select(str => {
+			string[] splits = str.Split(":");
+			return (splits[0], splits[1]);
+		}).ToArray());
 	}
 }

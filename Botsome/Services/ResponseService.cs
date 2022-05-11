@@ -1,11 +1,8 @@
 using System.Collections.Concurrent;
 using System.Timers;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Shared;
 using Timer = System.Timers.Timer;
 
-namespace Botsome.Coordinator; 
+namespace Botsome; 
 
 public class ResponseService {
 	private readonly ILogger<ResponseService> m_Logger;
@@ -45,7 +42,7 @@ public class ResponseService {
 			Event = evt;
 			m_Service = service;
 			m_Timer = new Timer();
-			m_Timer.Interval = 3_000;
+			m_Timer.Interval = 750; // TODO config item
 			m_Timer.AutoReset = false;
 			m_Timer.Elapsed += Elapsed;
 			m_Timer.Start();

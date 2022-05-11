@@ -1,21 +1,22 @@
 using System.Text.RegularExpressions;
 using DSharpPlus;
 using DSharpPlus.Entities;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Shared;
 
-namespace Botsome.Coordinator; 
+namespace Botsome; 
 
-public class BotsomeClient : IDisposable {
+public class BotsomeClient : IAsyncDisposable {
 	private static readonly Regex EmoteRegex = new Regex(@"^<a?:\w+:(?<id>\d{18})>$");
 	
 	private readonly DiscordClient m_Discord;
 	private readonly BotsomeOptions m_Options;
 
-	private BotsomeClient(DiscordClient discord, BotsomeOptions options, string id, ResponseService responseService) {
+	public string Token { get; }
+
+	private BotsomeClient(string token, DiscordClient discord, BotsomeOptions options, string id, ResponseService responseService) {
 		m_Discord = discord;
 		m_Options = options;
+		Token = token;
 
 		discord.MessageCreated += (o, e) => {
 			Match match = EmoteRegex.Match(e.Message.Content);
@@ -26,11 +27,12 @@ public class BotsomeClient : IDisposable {
 			return Task.CompletedTask;
 		};
 	}
-	
-	public static async Task<BotsomeClient> CreateAsync(string botToken, string id, IServiceProvider isp) {
+
+	public static async Task<BotsomeClient> CreateAsync(string token, string id, IServiceProvider isp) {
 		var discord = new DiscordClient(new DiscordConfiguration() {
-			Token = botToken,
-			Intents = DiscordIntents.GuildMessages
+			Token = token,
+			Intents = DiscordIntents.GuildMessages,
+			LoggerFactory = isp.GetRequiredService<ILoggerFactory>()
 		});
 
 		var options = isp.GetRequiredService<IOptions<BotsomeOptions>>().Value;
@@ -38,7 +40,7 @@ public class BotsomeClient : IDisposable {
 
 		await discord.ConnectAsync();
 
-		return new BotsomeClient(discord, options, id, responseService);
+		return new BotsomeClient(token, discord, options, id, responseService);
 	}
 	
 	public void Respond(BotsomeEvent evt) {
@@ -65,7 +67,8 @@ public class BotsomeClient : IDisposable {
 		});
 	}
 	
-	public void Dispose() {
+	public async ValueTask DisposeAsync() {
+		await m_Discord.DisconnectAsync();
 		m_Discord.Dispose();
 	}
 }

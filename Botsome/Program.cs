@@ -1,4 +1,4 @@
-using Botsome.Coordinator;
+using Botsome;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +12,11 @@ builder.Services.AddSingleton<Random>();
 builder.Services.AddSingleton<ClientService>();
 builder.Services.AddSingleton<ResponseService>();
 
+builder.Services.Configure<BotsomeOptions>(builder.Configuration.GetSection("Botsome"));
+
 var app = builder.Build();
+
+app.UseHttpLogging();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()) {
