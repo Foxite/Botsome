@@ -7,27 +7,27 @@ using Shared;
 
 namespace Botsome.Coordinator; 
 
-public class BotsomeClient {
+public class BotsomeClient : IDisposable {
 	private static readonly Regex EmoteRegex = new Regex(@"^<a?:\w+:(?<id>\d{18})>$");
 	
 	private readonly DiscordClient m_Discord;
 	private readonly BotsomeOptions m_Options;
 
-	private BotsomeClient(DiscordClient discord, BotsomeOptions options, Guid guid, ResponseService responseService) {
+	private BotsomeClient(DiscordClient discord, BotsomeOptions options, string id, ResponseService responseService) {
 		m_Discord = discord;
 		m_Options = options;
 
 		discord.MessageCreated += (o, e) => {
 			Match match = EmoteRegex.Match(e.Message.Content);
 			if (match.Success && match.Groups["id"].Value == m_Options.EmoteId.ToString()) {
-				responseService.OnBotsome(new BotsomeEvent(e.Channel.Id, e.Message.Id), guid);
+				responseService.OnBotsome(new BotsomeEvent(e.Channel.Id, e.Message.Id), id);
 			}
 			
 			return Task.CompletedTask;
 		};
 	}
 	
-	public static async Task<BotsomeClient> CreateAsync(string botToken, Guid id, IServiceProvider isp) {
+	public static async Task<BotsomeClient> CreateAsync(string botToken, string id, IServiceProvider isp) {
 		var discord = new DiscordClient(new DiscordConfiguration() {
 			Token = botToken,
 			Intents = DiscordIntents.GuildMessages
@@ -64,8 +64,8 @@ public class BotsomeClient {
 			await message.CreateReactionAsync(discordEmoji);
 		});
 	}
-}
-
-public class BotsomeOptions {
-	public ulong EmoteId { get; set; }
+	
+	public void Dispose() {
+		m_Discord.Dispose();
+	}
 }

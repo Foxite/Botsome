@@ -19,13 +19,13 @@ public class ResponseService {
 		m_Random = random;
 	}
 
-	public void OnBotsome(BotsomeEvent evt, Guid id) {
+	public void OnBotsome(BotsomeEvent evt, string id) {
 		m_IncomingReports.GetOrAdd(evt, be => new BotsomeReports(this, be)).Guids.Add(id);
 	}
 
 	private void OnExpired(BotsomeReports reports) {
 		m_IncomingReports.TryRemove(reports.Event, out _);
-		Guid chosenId = reports.Guids[m_Random.Next(0, reports.Guids.Count)];
+		string chosenId = reports.Guids[m_Random.Next(0, reports.Guids.Count)];
 		if (m_ClientService.GetClient(chosenId, out BotsomeClient? client)) {
 			client.Respond(reports.Event);
 		} else {
@@ -38,10 +38,10 @@ public class ResponseService {
 		private readonly Timer m_Timer;
 		
 		public BotsomeEvent Event { get; }
-		public List<Guid> Guids { get; }
+		public List<string> Guids { get; }
 
 		public BotsomeReports(ResponseService service, BotsomeEvent evt) {
-			Guids = new List<Guid>(10);
+			Guids = new List<string>(10);
 			Event = evt;
 			m_Service = service;
 			m_Timer = new Timer();

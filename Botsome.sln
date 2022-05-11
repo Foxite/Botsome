@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Botsome.Coordinator", "Botsome.Coordinator\Botsome.Coordinator.csproj", "{1FB6FCE4-45B1-414B-9176-C0A84C6F122F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Botsome", "Botsome\Botsome.csproj", "{1FB6FCE4-45B1-414B-9176-C0A84C6F122F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
