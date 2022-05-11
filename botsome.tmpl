@@ -1,7 +1,7 @@
 #!/bin/sh
 
 curl -XPATCH --data '
-{{- range $index, $container := whereLabelExists $ "nl.dirkkok.botsome" -}}
-    {{- $token_envvar := (when (contains $container.Labels "nl.dirkkok.botsome.envvar") (index $container.Labels "nl.dirkkok.botsome.envvar") "BOT_TOKEN") -}}
+{{- range $index, $container := whereLabelExists $ "me.foxite.botsome" -}}
+    {{- $token_envvar := (when (contains $container.Labels "me.foxite.botsome.envvar") (index $container.Labels "me.foxite.botsome.envvar") "BOT_TOKEN") -}}
     {{- printf "botStrings[%d]=%s:%s&" $index $container.ID (index $container.Env $token_envvar) -}}
 {{- end }}' http://botsome/Botsome
