@@ -12,8 +12,8 @@ services:
       - 80
   dockergen:
     build:
-      context: docker
-      dockerfile: dockergen.dockerfile
+      context: dockergen
+      dockerfile: Dockerfile
     command: -wait 2s -notify-output -notify "chmod +x /tmp/botsome.sh; /tmp/botsome.sh" -watch /templates/botsome.tmpl /tmp/botsome.sh
     depends_on:
       - botsome

@@ -6,15 +6,31 @@ on:
   pull_request:
 
 jobs:
-  build:
+  build-botsome:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Publish Docker
+    - name: Publish Botsome image
       uses: elgohr/Publish-Docker-Github-Action@3.04
       with:
         name: botsome
         context: Botsome
+        registry: ${{ secrets.PUSH_REPO }}
+        username: ${{ secrets.PUSH_USER }}
+        password: ${{ secrets.PUSH_PASSWD }}
+        tags: "2"
+        default_branch: master
+        no_push: ${{ github.event_name == 'pull_request' }}
+
+  build-dockergen:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Publish Dockergen image
+      uses: elgohr/Publish-Docker-Github-Action@3.04
+      with:
+        name: botsome-dockergen
+        context: Dockergen
         registry: ${{ secrets.PUSH_REPO }}
         username: ${{ secrets.PUSH_USER }}
         password: ${{ secrets.PUSH_PASSWD }}
