@@ -14,7 +14,7 @@ jobs:
       uses: elgohr/Publish-Docker-Github-Action@3.04
       with:
         name: botsome
-        dockerfile: Botsome/Dockerfile
+        context: Botsome
         registry: ${{ secrets.PUSH_REPO }}
         username: ${{ secrets.PUSH_USER }}
         password: ${{ secrets.PUSH_PASSWD }}

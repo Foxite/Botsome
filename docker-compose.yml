@@ -19,9 +19,9 @@ services:
       - botsome
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./botsome.tmpl:/templates/botsome.tmpl
     networks:
       - botsome-network
-      
+
 networks:
   botsome-network:
+
