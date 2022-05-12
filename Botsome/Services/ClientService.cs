@@ -18,17 +18,26 @@ public class ClientService {
 		(string Id, string Token)[] toAdd = bots.Select(bot => bot).Where(kvp => !m_Clients.ContainsKey(kvp.Id)).ToArray();
 
 		foreach ((string? id, BotsomeClient? client) in toRemove) {
-			if (!m_Clients.TryRemove(id, out _)) {
-				m_Logger.LogWarning("Tried to remove bot that wasn't present: ID {id}, token ending in {tokenSuffix}", id, client.Token[^3..]);
+			try {
+				if (!m_Clients.TryRemove(id, out _)) {
+					m_Logger.LogWarning("Tried to remove bot that wasn't present: ID {id}, token ending in {tokenSuffix}", id, client.Token[^3..]);
+				}
+
+				await client.DisposeAsync();
+			} catch (Exception e) {
+				m_Logger.LogCritical(e, "Caught exception while removing bot with ID {id}", id);
 			}
-			await client.DisposeAsync();
 		}
 
 		foreach ((string id, string token) in toAdd) {
-			var client = await BotsomeClient.CreateAsync(token, id, m_ServiceProvider);
-			if (!m_Clients.TryAdd(id, client)) {
-				await client.DisposeAsync();
-				m_Logger.LogWarning("Tried to add a bot with an ID that was already present: ID {id}, token ending in {tokenSuffix}", id, token[^3..]);
+			try {
+				var client = await BotsomeClient.CreateAsync(token, id, m_ServiceProvider);
+				if (!m_Clients.TryAdd(id, client)) {
+					await client.DisposeAsync();
+					m_Logger.LogWarning("Tried to add a bot with an ID that was already present: ID {id}, token ending in {tokenSuffix}", id, token[^3..]);
+				}
+			} catch (Exception e) {
+				m_Logger.LogCritical(e, "Caught exception while creating bot with ID {id}", id);
 			}
 		}
 	}
