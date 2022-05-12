@@ -1,10 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Botsome.Coordinator", "Botsome.Coordinator\Botsome.Coordinator.csproj", "{1FB6FCE4-45B1-414B-9176-C0A84C6F122F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Botsome", "Botsome\Botsome.csproj", "{1FB6FCE4-45B1-414B-9176-C0A84C6F122F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Botsome.BotCompanion", "Botsome.BotCompanion\Botsome.BotCompanion.csproj", "{DA3F60F9-869C-4C2A-AE3A-DD3DA2DEA7D6}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Botsome.Shared", "Botsome.Shared\Botsome.Shared.csproj", "{70E9DC53-3F5B-4930-8688-F67F09AF3C8F}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docker", "Docker", "{DC1ED06A-01C2-45AC-BCD8-8D553B2ACB95}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+		botsome.tmpl = botsome.tmpl
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -16,13 +18,5 @@ Global
 		{1FB6FCE4-45B1-414B-9176-C0A84C6F122F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1FB6FCE4-45B1-414B-9176-C0A84C6F122F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1FB6FCE4-45B1-414B-9176-C0A84C6F122F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DA3F60F9-869C-4C2A-AE3A-DD3DA2DEA7D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DA3F60F9-869C-4C2A-AE3A-DD3DA2DEA7D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DA3F60F9-869C-4C2A-AE3A-DD3DA2DEA7D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DA3F60F9-869C-4C2A-AE3A-DD3DA2DEA7D6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{70E9DC53-3F5B-4930-8688-F67F09AF3C8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{70E9DC53-3F5B-4930-8688-F67F09AF3C8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{70E9DC53-3F5B-4930-8688-F67F09AF3C8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{70E9DC53-3F5B-4930-8688-F67F09AF3C8F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
