@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 namespace Botsome; 
 
 public class BotsomeClient : IAsyncDisposable {
-	private static readonly Regex EmoteRegex = new Regex(@"^<a?:\w+:(?<id>\d{18})>$");
+	private static readonly Regex EmoteRegex = new Regex(@"<a?:\w+:(?<id>\d{18})>");
 	
 	private readonly DiscordClient m_Discord;
 	private readonly BotsomeOptions m_Options;
@@ -19,8 +19,8 @@ public class BotsomeClient : IAsyncDisposable {
 		Token = token;
 
 		discord.MessageCreated += (o, e) => {
-			Match match = EmoteRegex.Match(e.Message.Content);
-			if (match.Success && match.Groups["id"].Value == m_Options.EmoteId.ToString()) {
+			MatchCollection matches = EmoteRegex.Matches(e.Message.Content);
+			if (matches.Any(match => match.Groups["id"].Value == m_Options.EmoteId.ToString())) {
 				responseService.OnBotsome(new BotsomeEvent(e.Channel.Id, e.Message.Id), id);
 			}
 			
