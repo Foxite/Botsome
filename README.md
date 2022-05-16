@@ -1,7 +1,7 @@
 # Botsome
-Botsome monitors your docker containers and will ~~steal~~ use the bot tokens of your Discord bots, and whenever someone sends a message containing only the emote you specified, it will pick a random bot token and use it to react with that message with the same emote.
+Botsome monitors your docker containers and will ~~steal~~ use the bot tokens of your Discord bots, and whenever someone sends a message containing the emote you specified, it will pick a random bot token and use it to react with that message with the same emote.
 
-As an unwanted side effect, your bots will always appear online, even if the actual bot container is offline.
+As an unwanted side effect, if a bot container is running but isn't actually connected to Discord, the bot will still appear online because of Botsome's connection using its token.
 
 ## Etymology
 Botsome is the name of an emote in a series of "wholesome" derived emotes, in one of my servers.
