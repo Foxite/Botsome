@@ -1,5 +1,5 @@
 namespace Botsome;
 
 public class BotsomeOptions {
-	public ulong EmoteId { get; set; }
+	public string EmoteName { get; set; }
 }

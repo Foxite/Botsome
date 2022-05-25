@@ -4,7 +4,7 @@ services:
   botsome:
     build: Botsome
     environment:
-      Botsome__EmoteId: 752614049027719217
+      Botsome__EmoteName: botsome
       Logging__Console__FormatterName: simple
     networks:
       - botsome-network

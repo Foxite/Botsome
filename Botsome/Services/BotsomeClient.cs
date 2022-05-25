@@ -6,25 +6,40 @@ using Microsoft.Extensions.Options;
 namespace Botsome; 
 
 public class BotsomeClient : IAsyncDisposable {
-	private static readonly Regex EmoteRegex = new Regex(@"^<a?:\w+:(?<id>\d{18})>$");
+	private static readonly Regex EmoteRegex = new Regex(@"^<(?<animated>a?):(?<name>\w+):(?<id>\d{18})>$");
 	
 	private readonly DiscordClient m_Discord;
 	private readonly BotsomeOptions m_Options;
+	private DiscordGuildEmoji m_Emote;
 
 	public string Token { get; }
 
-	private BotsomeClient(string token, DiscordClient discord, BotsomeOptions options, string id, ResponseService responseService) {
+	private BotsomeClient(string token, DiscordClient discord, BotsomeOptions options, string id, ResponseService responseService, ILogger<BotsomeClient> logger) {
 		m_Discord = discord;
 		m_Options = options;
 		Token = token;
 
 		discord.MessageCreated += (o, e) => {
 			Match match = EmoteRegex.Match(e.Message.Content);
-			if (match.Success && match.Groups["id"].Value == m_Options.EmoteId.ToString()) {
+			if (match.Success && match.Groups["name"].Value.ToLower() == m_Options.EmoteName) {
 				responseService.OnBotsome(new BotsomeEvent(e.Channel.Id, e.Message.Id), id);
 			}
 			
 			return Task.CompletedTask;
+		};
+
+		discord.Ready += async (_, _) => {
+			foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
+				IReadOnlyList<DiscordGuildEmoji>? guildEmojis = await kvp.Value.GetEmojisAsync();
+				m_Emote = guildEmojis.FirstOrDefault(emoji => emoji.Name == m_Options.EmoteName);
+				if (m_Emote != null) {
+					break;
+				}
+			}
+
+			if (m_Emote == null) {
+				logger.LogCritical("Did not find emote");
+			}
 		};
 	}
 
@@ -37,33 +52,18 @@ public class BotsomeClient : IAsyncDisposable {
 
 		var options = isp.GetRequiredService<IOptions<BotsomeOptions>>().Value;
 		var responseService = isp.GetRequiredService<ResponseService>();
+		var logger = isp.GetRequiredService<ILogger<BotsomeClient>>();
 
 		await discord.ConnectAsync();
 
-		return new BotsomeClient(token, discord, options, id, responseService);
+		return new BotsomeClient(token, discord, options, id, responseService, logger);
 	}
 	
 	public void Respond(BotsomeEvent evt) {
 		Task.Run(async () => {
-			DiscordEmoji? discordEmoji;
-			if (!DiscordEmoji.TryFromGuildEmote(m_Discord, m_Options.EmoteId, out discordEmoji)) {
-				foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
-					IReadOnlyList<DiscordGuildEmoji>? guildEmojis = await kvp.Value.GetEmojisAsync();
-					discordEmoji = guildEmojis.FirstOrDefault(emoji => emoji.Id == m_Options.EmoteId);
-					if (discordEmoji != null) {
-						break;
-					}
-				}
-			}
-
-			if (discordEmoji == null) {
-				Console.WriteLine("Did not find emote");
-				return;
-			}
-
 			DiscordChannel channel = await m_Discord.GetChannelAsync(evt.ChannelId);
 			DiscordMessage message = await channel.GetMessageAsync(evt.MessageId);
-			await message.CreateReactionAsync(discordEmoji);
+			await message.CreateReactionAsync(m_Emote);
 		});
 	}
 	
