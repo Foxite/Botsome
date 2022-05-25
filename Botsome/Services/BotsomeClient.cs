@@ -39,6 +39,7 @@ public class BotsomeClient : IAsyncDisposable {
 
 			if (m_Emote == null) {
 				logger.LogCritical("Did not find emote, ID: {Id}", id);
+				await m_Discord.DisconnectAsync();
 			}
 		};
 	}
