@@ -20,8 +20,8 @@ public class BotsomeClient : IAsyncDisposable {
 		Token = token;
 
 		discord.MessageCreated += (o, e) => {
-			Match match = EmoteRegex.Match(e.Message.Content);
-			if (match.Success && match.Groups["name"].Value.ToLower() == m_Options.EmoteName) {
+			MatchCollection matches = EmoteRegex.Matches(e.Message.Content);
+			if (matches.Any(match => match.Groups["name"].Value.ToLower() == m_Options.EmoteName)) {
 				responseService.OnBotsome(new BotsomeEvent(e.Channel.Id, e.Message.Id), id);
 			}
 			
