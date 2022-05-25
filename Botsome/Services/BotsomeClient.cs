@@ -28,32 +28,37 @@ public class BotsomeClient : IAsyncDisposable {
 			return Task.CompletedTask;
 		};
 
-		discord.Ready += async (_, _) => {
-			foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
-				IReadOnlyList<DiscordGuildEmoji>? guildEmojis = await kvp.Value.GetEmojisAsync();
-				m_Emote = guildEmojis.FirstOrDefault(emoji => emoji.Name == m_Options.EmoteName);
-				if (m_Emote != null) {
-					break;
+		discord.Ready += (_, _) => {
+			Task.Run(async () => {
+				foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
+					IReadOnlyList<DiscordGuildEmoji>? guildEmojis = await kvp.Value.GetEmojisAsync();
+					m_Emote = guildEmojis.FirstOrDefault(emoji => emoji.Name == m_Options.EmoteName);
+					if (m_Emote != null) {
+						break;
+					}
 				}
-			}
 
-			if (m_Emote == null) {
-				logger.LogCritical("Did not find emote, ID: {Id}", id);
-				await m_Discord.DisconnectAsync();
-			}
+				if (m_Emote == null) {
+					logger.LogCritical("Did not find emote, ID: {Id}", id);
+					await m_Discord.DisconnectAsync();
+				}
+			});
+			return Task.CompletedTask;
 		};
 	}
 
 	public static async Task<BotsomeClient> CreateAsync(string token, string id, IServiceProvider isp) {
+		ILoggerFactory loggerFactory = isp.GetRequiredService<ILoggerFactory>().Scope("ID: {Id}", id);
+		
 		var discord = new DiscordClient(new DiscordConfiguration() {
 			Token = token,
 			Intents = DiscordIntents.GuildMessages,
-			LoggerFactory = isp.GetRequiredService<ILoggerFactory>()
+			LoggerFactory = loggerFactory
 		});
 
 		var options = isp.GetRequiredService<IOptions<BotsomeOptions>>().Value;
 		var responseService = isp.GetRequiredService<ResponseService>();
-		var logger = isp.GetRequiredService<ILogger<BotsomeClient>>();
+		var logger = loggerFactory.CreateLogger<BotsomeClient>();
 
 		await discord.ConnectAsync();
 
