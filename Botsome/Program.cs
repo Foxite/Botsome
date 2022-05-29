@@ -1,35 +1,35 @@
+using System.Runtime.InteropServices;
 using Botsome;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
-var builder = WebApplication.CreateBuilder(args);
+IHostBuilder builder = Host.CreateDefaultBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddSingleton<Random>();
-builder.Services.AddSingleton<ClientService>();
-builder.Services.AddSingleton<ResponseService>();
+builder.ConfigureServices((hbc, isc) => {
+	isc.AddSingleton<Random>();
+	isc.AddSingleton<ClientService>();
+	isc.AddSingleton<ResponseService>();
 
-builder.Services.Configure<BotsomeOptions>(builder.Configuration.GetSection("Botsome"));
+	isc.Configure<BotsomeOptions>(hbc.Configuration.GetSection("Botsome"));
+});
 
-var app = builder.Build();
-
-app.UseHttpLogging();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment()) {
-	app.UseSwagger();
-	app.UseSwaggerUI();
-}
-
-//app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
+IHost app = builder.Build();
 
 TaskScheduler.UnobservedTaskException += (sender, eventArgs) => app.Services.GetRequiredService<ILogger<Program>>().LogCritical(eventArgs.Exception, "Unobserved task exception {sender} {observed}", sender, eventArgs.Observed);
 
-app.Run();
+async Task UpdateBotsAsync() {
+	var clientService = app.Services.GetRequiredService<ClientService>();
+	IEnumerable<(string Id, string Token)> botStrings = JObject.Parse(await File.ReadAllTextAsync("/botsome/bots.json")).Properties().Select(prop => (Id: prop.Name, Token: prop.Value.ToObject<string>()!));
+	await clientService.UpdateList(botStrings);
+}
+
+PosixSignalRegistration.Create(PosixSignal.SIGHUP, _ => Task.Run(UpdateBotsAsync));
+
+await UpdateBotsAsync();
+
+await app.RunAsync();

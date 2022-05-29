@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Botsome; 
 
 public class ScopedLoggerFactory : ILoggerFactory {

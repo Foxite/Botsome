@@ -2,26 +2,21 @@ version: "3.3"
 
 services:
   botsome:
+    container_name: botsome
     build: Botsome
     environment:
       Botsome__EmoteName: botsome
       Logging__Console__FormatterName: simple
-    networks:
-      - botsome-network
-    expose:
-      - 80
+    volumes:
+      - botsome:/botsome
   dockergen:
     build:
       context: dockergen
       dockerfile: Dockerfile
-    command: -wait 2s -notify-output -notify "chmod +x /tmp/botsome.sh; /tmp/botsome.sh" -watch /templates/botsome.tmpl /tmp/botsome.sh
-    depends_on:
-      - botsome
+    command: -wait 2s -notify-sighup botsome -watch /templates/botsome.tmpl /botsome/bots.json
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-    networks:
-      - botsome-network
+      - botsome:/botsome/
 
-networks:
-  botsome-network:
-
+volumes:
+  botsome:

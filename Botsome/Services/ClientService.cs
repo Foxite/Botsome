@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 
 namespace Botsome; 
 
@@ -13,7 +14,7 @@ public class ClientService {
 		m_Logger = logger;
 	}
 
-	public async Task UpdateList((string Id, string Token)[] bots) {
+	public async Task UpdateList(IEnumerable<(string Id, string Token)> bots) {
 		KeyValuePair<string, BotsomeClient>[] toRemove = m_Clients.Where(kvp => !bots.Select(bot => bot.Id).Contains(kvp.Key)).ToArray();
 		(string Id, string Token)[] toAdd = bots.Select(bot => bot).Where(kvp => !m_Clients.ContainsKey(kvp.Id)).ToArray();
 

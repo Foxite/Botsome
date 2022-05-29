@@ -1,9 +1,11 @@
 using System.Text.RegularExpressions;
 using DSharpPlus;
 using DSharpPlus.Entities;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Botsome; 
+namespace Botsome;
 
 public class BotsomeClient : IAsyncDisposable {
 	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d{18})>");
