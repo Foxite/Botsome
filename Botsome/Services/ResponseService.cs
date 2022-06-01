@@ -17,7 +17,7 @@ public class ResponseService {
 		m_Random = random;
 	}
 
-	public void OnBotsome(BotsomeEvent evt, string id) {
+	public void OnEmote(BotsomeEvent evt, string id) {
 		m_IncomingReports.GetOrAdd(evt, be => new BotsomeReports(this, be)).Guids.Add(id);
 	}
 
