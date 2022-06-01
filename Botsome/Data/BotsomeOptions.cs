@@ -3,7 +3,7 @@ namespace Botsome;
 public class BotsomeOptions {
 	public string? EmoteName { get; set; }
 	public string? Word { get; set; }
-	public ulong? WordsOnlyInChannel { get; set; }
+	public ulong[]? WordsOnlyInChannel { get; set; }
 }
 
 /*

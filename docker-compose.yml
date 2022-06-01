@@ -7,7 +7,7 @@ services:
     environment:
       Botsome__EmoteName: botsome
       Botsome__Word: word
-      Botsome__WordsOnlyInChannel: 940605565476929538
+      Botsome__WordsOnlyInChannel__0: 940605565476929538
       Logging__Console__FormatterName: simple
     volumes:
       - botsome:/botsome
