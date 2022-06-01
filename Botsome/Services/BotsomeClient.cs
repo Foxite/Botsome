@@ -24,7 +24,7 @@ public class BotsomeClient : IAsyncDisposable {
 		Token = token;
 
 		if (options.Word != null) {
-			m_WordRegex = new Regex(@$"(^|\b){options.Word}($|\b)");
+			m_WordRegex = new Regex(@$"(^|\b){options.Word}($|\b)", RegexOptions.IgnoreCase);
 			
 			discord.MessageCreated += (o, e) => {
 				if (!e.Author.IsBot && (!m_Options.WordsOnlyInChannel.HasValue || m_Options.WordsOnlyInChannel.Value == e.Channel.Id) && m_WordRegex.IsMatch(e.Message.Content)) {
