@@ -1,64 +1,46 @@
+using System.Text.RegularExpressions;
+using Newtonsoft.Json;
+
 namespace Botsome;
 
 public class BotsomeOptions {
-	public string? EmoteName { get; set; }
-	public string? Word { get; set; }
-	public ulong[]? WordsOnlyInChannel { get; set; }
+	public List<BotsomeItem> Items { get; set; }
 }
-
-/*
-"Botsome": [
-  {
-    "Trigger": {
-      "Type": "Message",
-      "EmoteName": "botsome"
-    },
-    "Response": {
-      "Which": "Random",
-      "Reaction": {
-        "Name": "botsome"
-      }
-    }
-  },
-  {
-    "Trigger": {
-      "Type": "Message",
-      "Word": "sus"
-    },
-    "Response": {
-      "Which": "All",
-      "Message": "sus"
-    }
-  }
-]
 
 public class BotsomeItem {
 	public BotsomeTrigger Trigger { get; set; }
-	public BotsomeResponse Response { get; set; }
+	public BotSelection RespondUsing { get; set; }
+	public List<BotsomeResponse> Responses { get; set; }
 }
 
 public class BotsomeTrigger {
 	public TriggerType Type { get; set; }
+	public List<ulong>? OnlyInChannels { get; set; }
+	public string? MessageRegex { get; set; }
+
+	public Regex? ActualMessageRegex => MessageRegex == null ? null : new Regex(MessageRegex, RegexOptions.IgnoreCase);
 	public string? EmoteName { get; set; }
-	public string? Word { get; set; }
 }
 
 public enum TriggerType {
-	Message,
+	MessageContent,
+	EmoteNameAsMessage,
 }
 
 public class BotsomeResponse {
-	public BotSelection Which { get; set; }
-	public BotsomeResponseReaction? Reaction { get; set; }
-	public string? Message { get; set; }
+	public ResponseType Type { get; set; }
+	public string Response { get; set; }
 }
 
 public enum BotSelection {
-	Random, InOrder, All
+	Random,
+	//RoundRobin,
+	All
 }
 
-public class BotsomeResponseReaction {
-	public string? Name { get; set; }
-	public ulong? Id { get; set; }
+public enum ResponseType {
+	EmojiAsReaction,
+	EmoteNameAsReaction,
+	EmoteNameAsMessage,
+	Message,
 }
-//*/

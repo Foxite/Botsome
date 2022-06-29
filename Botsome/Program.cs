@@ -24,12 +24,22 @@ TaskScheduler.UnobservedTaskException += (sender, eventArgs) => app.Services.Get
 
 async Task UpdateBotsAsync() {
 	var clientService = app.Services.GetRequiredService<ClientService>();
-	IEnumerable<(string Id, string Token)> botStrings = JObject.Parse(await File.ReadAllTextAsync("/botsome/bots.json")).Properties().Select(prop => (Id: prop.Name, Token: prop.Value.ToObject<string>()!));
+	IEnumerable<(string Id, string Token)> botStrings = JObject.Parse(await File.ReadAllTextAsync(Environment.GetEnvironmentVariable("BOTSOME_FILE") ?? "/botsome/bots.json")).Properties().Select(prop => (Id: prop.Name, Token: prop.Value.ToObject<string>()!));
 	await clientService.UpdateList(botStrings);
 }
 
-PosixSignalRegistration.Create(PosixSignal.SIGHUP, _ => Task.Run(UpdateBotsAsync));
+PosixSignalRegistration.Create(PosixSignal.SIGHUP, _ => {
+	try {
+		UpdateBotsAsync().GetAwaiter().GetResult();
+	} catch (Exception e) {
+		app.Services.GetRequiredService<ILogger<Program>>().LogError(e, "Update failed");
+	}
+});
 
-await UpdateBotsAsync();
+try {
+	await UpdateBotsAsync();
+} catch (Exception e) {
+	app.Services.GetRequiredService<ILogger<Program>>().LogError(e, "Initial update failed");
+}
 
 await app.RunAsync();

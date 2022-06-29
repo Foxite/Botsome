@@ -1,6 +1,6 @@
-using System.Text.RegularExpressions;
 using DSharpPlus;
 using DSharpPlus.Entities;
+using DSharpPlus.EventArgs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,62 +8,79 @@ using Microsoft.Extensions.Options;
 namespace Botsome;
 
 public class BotsomeClient : IAsyncDisposable {
-	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d{18})>");
-	
 	private readonly DiscordClient m_Discord;
-	private readonly BotsomeOptions m_Options;
-	private readonly Regex? m_WordRegex;
-	private DiscordGuildEmoji m_Emote;
+	private readonly IOptions<BotsomeOptions> m_Options;
+	private ResponseService m_ResponseService;
 
+	public Dictionary<string, DiscordEmoji> Emotes { get; }
 	public string Token { get; }
+	public string Id { get; }
 
 	// ReSharper disable warning CS8618
-	private BotsomeClient(string token, DiscordClient discord, BotsomeOptions options, string id, ResponseService responseService, ILogger<BotsomeClient> logger) {
+	private BotsomeClient(string token, DiscordClient discord, IOptions<BotsomeOptions> options, string id, ResponseService responseService, ILogger<BotsomeClient> logger) {
+		Emotes = new Dictionary<string, DiscordEmoji>();
 		m_Discord = discord;
 		m_Options = options;
+		m_ResponseService = responseService;
 		Token = token;
+		Id = id;
 
-		if (options.Word != null) {
-			m_WordRegex = new Regex(@$"(^|\b){options.Word}($|\b)", RegexOptions.IgnoreCase);
-			
-			discord.MessageCreated += (o, e) => {
-				if (!e.Author.IsBot && (m_Options.WordsOnlyInChannel == null || m_Options.WordsOnlyInChannel.Contains(e.Channel.Id)) && m_WordRegex.IsMatch(e.Message.Content)) {
-					return e.Channel.SendMessageAsync(m_Options.Word);
-				}
-				
-				return Task.CompletedTask;
-			};
-		}
-
-		if (m_Options.EmoteName != null) {
-			discord.MessageCreated += (o, e) => {
-				MatchCollection matches = EmoteRegex.Matches(e.Message.Content);
-				if (matches.Any(match => match.Groups["name"].Value.ToLower() == m_Options.EmoteName)) {
-					responseService.OnEmote(new BotsomeEvent(e.Channel.Id, e.Message.Id), id);
-				}
-
-				return Task.CompletedTask;
-			};
-		}
-
-		discord.Ready += (_, _) => {
-			Task.Run(async () => {
-				foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
-					IReadOnlyList<DiscordGuildEmoji>? guildEmojis = await kvp.Value.GetEmojisAsync();
-					// ReSharper disable warning CS8601
-					m_Emote = guildEmojis.FirstOrDefault(emoji => emoji.Name == m_Options.EmoteName);
-					if (m_Emote != null) {
-						break;
-					}
-				}
-
-				if (m_Emote == null) {
-					logger.LogCritical("Did not find emote, ID: {Id}", id);
-					await m_Discord.DisconnectAsync();
+		discord.MessageCreated += (client, ea) => {
+			_ = Task.Run(async () => {
+				try {
+					await OnMessageAsync(ea);
+				} catch (Exception ex) {
+					logger.LogError(ex, "Exception caught in off-thread MessageCreated handler");
 				}
 			});
 			return Task.CompletedTask;
 		};
+
+		discord.Ready += (_, _) => {
+			Task.Run(async () => {
+				try {
+					List<string> emoteNames = options.Value.Items.Select(item => item.Trigger.EmoteName).Where(name => name != null).Select(name => name!).Distinct().ToList();
+
+					foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
+						IReadOnlyList<DiscordGuildEmoji>? guildEmojis = await kvp.Value.GetEmojisAsync();
+						// ReSharper disable warning CS8601
+						foreach (string emoteName in emoteNames) {
+							if (Emotes.ContainsKey(emoteName)) {
+								continue;
+							}
+
+							DiscordEmoji? emoji = guildEmojis.FirstOrDefault(emoji => emoji.Name == emoteName);
+							if (emoji != null) {
+								Emotes[emoteName] = emoji;
+							}
+						}
+					}
+
+					if (emoteNames.Count != Emotes.Count) {
+						logger.LogCritical("Did not find emotes with names: {Names}", string.Join(", ", emoteNames.Where(emoteName => !Emotes.ContainsKey(emoteName))));
+					}
+				} catch (Exception ex) {
+					logger.LogCritical(ex, "Exception caught while collecting emotes");
+				}
+			});
+			return Task.CompletedTask;
+		};
+	}
+
+	public async Task OnMessageAsync(MessageCreateEventArgs ea) {
+		foreach (BotsomeItem item in m_Options.Value.Items) {
+			if (!ea.Author.IsBot && AllowChannel(item, ea.Channel) && item.Trigger.Type switch {
+			    TriggerType.MessageContent => item.Trigger.ActualMessageRegex!.IsMatch(ea.Message.Content),
+			    TriggerType.EmoteNameAsMessage => ea.Message.Content.Contains(Emotes[item.Trigger.EmoteName!].ToString()),
+			    _ => false
+		    }) {
+				await m_ResponseService.ReportAsync(new BotsomeEvent(ea.Channel.Id, ea.Message.Id, item), this);
+			}
+		}
+	}
+
+	private static bool AllowChannel(BotsomeItem item, DiscordChannel channel) {
+		return item.Trigger.OnlyInChannels is not { Count: > 0 } || item.Trigger.OnlyInChannels.Contains(channel.Id);
 	}
 
 	public static async Task<BotsomeClient> CreateAsync(string token, string id, IServiceProvider isp) {
@@ -75,7 +92,7 @@ public class BotsomeClient : IAsyncDisposable {
 			LoggerFactory = loggerFactory
 		});
 
-		var options = isp.GetRequiredService<IOptions<BotsomeOptions>>().Value;
+		var options = isp.GetRequiredService<IOptions<BotsomeOptions>>();
 		var responseService = isp.GetRequiredService<ResponseService>();
 		var logger = loggerFactory.CreateLogger<BotsomeClient>();
 
@@ -84,16 +101,21 @@ public class BotsomeClient : IAsyncDisposable {
 		return new BotsomeClient(token, discord, options, id, responseService, logger);
 	}
 	
-	public void Respond(BotsomeEvent evt) {
-		Task.Run(async () => {
-			DiscordChannel channel = await m_Discord.GetChannelAsync(evt.ChannelId);
-			DiscordMessage message = await channel.GetMessageAsync(evt.MessageId);
-			await message.CreateReactionAsync(m_Emote);
-		});
-	}
-	
 	public async ValueTask DisposeAsync() {
 		await m_Discord.DisconnectAsync();
 		m_Discord.Dispose();
+	}
+
+	public async Task RespondAsync(BotsomeEvent evt) {
+		DiscordChannel channel = await m_Discord.GetChannelAsync(evt.ChannelId);
+		foreach (BotsomeResponse response in evt.Item.Responses) {
+			await (response.Type switch {
+				ResponseType.EmojiAsReaction => (await channel.GetMessageAsync(evt.MessageId)).CreateReactionAsync(DiscordEmoji.FromUnicode(response.Response)),
+				ResponseType.EmoteNameAsReaction => (await channel.GetMessageAsync(evt.MessageId)).CreateReactionAsync(Emotes[response.Response]),
+				ResponseType.EmoteNameAsMessage => channel.SendMessageAsync(Emotes[response.Response]),
+				ResponseType.Message => channel.SendMessageAsync(response.Response),
+				//_ => throw new ArgumentOutOfRangeException()
+			});
+		}
 	}
 }

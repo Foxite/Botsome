@@ -10,6 +10,7 @@ public class ResponseService {
 	private readonly ClientService m_ClientService;
 	private readonly Random m_Random;
 	private readonly ConcurrentDictionary<BotsomeEvent, BotsomeReports> m_IncomingReports = new();
+	private readonly object m_ReportLock = new();
 	
 	public ResponseService(ILogger<ResponseService> logger, ClientService clientService, Random random) {
 		m_Logger = logger;
@@ -17,17 +18,27 @@ public class ResponseService {
 		m_Random = random;
 	}
 
-	public void OnEmote(BotsomeEvent evt, string id) {
-		m_IncomingReports.GetOrAdd(evt, be => new BotsomeReports(this, be)).Guids.Add(id);
+	public async Task ReportAsync(BotsomeEvent evt, BotsomeClient client) {
+		if (evt.Item.RespondUsing == BotSelection.All) {
+			await client.RespondAsync(evt);
+		} else { // BotSelection.Random
+			lock (m_ReportLock) {
+				BotsomeReports report = m_IncomingReports.GetOrAdd(evt, be => new BotsomeReports(this, be));
+				report.Guids.Add(client.Id);
+			}
+		}
 	}
 
-	private void OnExpired(BotsomeReports reports) {
-		m_IncomingReports.TryRemove(reports.Event, out _);
+	private async Task OnExpiredAsync(BotsomeReports reports) {
+		lock (m_ReportLock) {
+			m_IncomingReports.TryRemove(reports.Event, out _);
+		}
+
 		string chosenId = reports.Guids[m_Random.Next(0, reports.Guids.Count)];
 		if (m_ClientService.GetClient(chosenId, out BotsomeClient? client)) {
-			client.Respond(reports.Event);
+			await client.RespondAsync(reports.Event);
 		} else {
-			m_Logger.LogWarning("Client closed after being chosen to respond {guid} {event}", chosenId, reports.Event);
+			m_Logger.LogWarning("Client closed after being chosen to respond {Guid} {Event.ChannelId} {Event.MessageId}", chosenId, reports.Event.ChannelId, reports.Event.MessageId);
 		}
 	}
 
@@ -49,10 +60,14 @@ public class ResponseService {
 			m_Timer.Start();
 		}
 
-		private void Elapsed(object? sender, ElapsedEventArgs e) {
+		private void Elapsed(object? sender, ElapsedEventArgs ea) {
 			m_Timer.Elapsed -= Elapsed;
 			m_Timer.Dispose();
-			m_Service.OnExpired(this);
+			try {
+				m_Service.OnExpiredAsync(this).GetAwaiter().GetResult();
+			} catch (Exception ex) {
+				m_Service.m_Logger.LogError(ex, "Exception caught while responding from timer");
+			}
 		}
 	}
 }
