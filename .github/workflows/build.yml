@@ -1,9 +1,13 @@
-name: Docker Image CI
+name: Build Botsome
 
 on:
   push:
     branches: [ master ]
+    paths:
+      - 'Botsome/**'
   pull_request:
+    paths:
+      - 'Botsome/**'
 
 jobs:
   build-botsome:
@@ -20,19 +24,3 @@ jobs:
         password: ${{ secrets.PUSH_PASSWD }}
         default_branch: master
         no_push: ${{ github.event_name == 'pull_request' }}
-
-  build-dockergen:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Publish Dockergen image
-      uses: elgohr/Publish-Docker-Github-Action@3.04
-      with:
-        name: botsome-dockergen
-        context: dockergen
-        registry: ${{ secrets.PUSH_REPO }}
-        username: ${{ secrets.PUSH_USER }}
-        password: ${{ secrets.PUSH_PASSWD }}
-        default_branch: master
-        no_push: ${{ github.event_name == 'pull_request' }}
-
