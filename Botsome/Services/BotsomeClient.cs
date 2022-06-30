@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
@@ -8,6 +9,8 @@ using Microsoft.Extensions.Options;
 namespace Botsome;
 
 public class BotsomeClient : IAsyncDisposable {
+	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d{18})>");
+	
 	private readonly DiscordClient m_Discord;
 	private readonly IOptions<BotsomeOptions> m_Options;
 	private ResponseService m_ResponseService;
@@ -39,7 +42,15 @@ public class BotsomeClient : IAsyncDisposable {
 		discord.Ready += (_, _) => {
 			Task.Run(async () => {
 				try {
-					List<string> emoteNames = options.Value.Items.Select(item => item.Trigger.EmoteName).Where(name => name != null).Select(name => name!).Distinct().ToList();
+					List<string> emoteNames = 
+						(
+							from item in options.Value.Items
+							from response in item.Responses
+							where response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction && response.Response != null
+							select response.Response
+						)
+						.Distinct()
+						.ToList();
 
 					foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
 						IReadOnlyList<DiscordGuildEmoji>? guildEmojis = await kvp.Value.GetEmojisAsync();
@@ -71,7 +82,7 @@ public class BotsomeClient : IAsyncDisposable {
 		foreach (BotsomeItem item in m_Options.Value.Items) {
 			if (!ea.Author.IsBot && AllowChannel(item, ea.Channel) && item.Trigger.Type switch {
 			    TriggerType.MessageContent => item.Trigger.ActualMessageRegex!.IsMatch(ea.Message.Content),
-			    TriggerType.EmoteNameAsMessage => ea.Message.Content.Contains(Emotes[item.Trigger.EmoteName!].ToString()),
+			    TriggerType.EmoteNameAsMessage => EmoteRegex.Matches(ea.Message.Content).Select(match => match.Groups["name"].Value).Any(emoteName => item.Trigger.ActualEmoteNameRegex!.IsMatch(emoteName)),
 			    _ => false
 		    }) {
 				await m_ResponseService.ReportAsync(new BotsomeEvent(ea.Channel.Id, ea.Message.Id, item), this);
