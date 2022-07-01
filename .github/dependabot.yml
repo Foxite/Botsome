@@ -1,15 +1,6 @@
 version: 2
 updates:
   - package-ecosystem: "nuget"
-    directory: "/Botsome.Coordinator"
+    directory: "/Botsome"
     schedule:
       interval: "daily"
-  - package-ecosystem: "nuget"
-    directory: "/Botsome.BotCompanion"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "nuget"
-    directory: "/Botsome.Shared"
-    schedule:
-      interval: "daily"
-
