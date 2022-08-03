@@ -7,14 +7,12 @@ namespace Botsome;
 
 public class ResponseService {
 	private readonly ILogger<ResponseService> m_Logger;
-	private readonly ClientService m_ClientService;
 	private readonly Random m_Random;
 	private readonly ConcurrentDictionary<BotsomeEvent, BotsomeReports> m_IncomingReports = new();
 	private readonly object m_ReportLock = new();
 	
-	public ResponseService(ILogger<ResponseService> logger, ClientService clientService, Random random) {
+	public ResponseService(ILogger<ResponseService> logger, Random random) {
 		m_Logger = logger;
-		m_ClientService = clientService;
 		m_Random = random;
 	}
 
@@ -24,7 +22,7 @@ public class ResponseService {
 		} else { // BotSelection.Random
 			lock (m_ReportLock) {
 				BotsomeReports report = m_IncomingReports.GetOrAdd(evt, be => new BotsomeReports(this, be));
-				report.Guids.Add(client.Id);
+				report.Clients.Add(client);
 			}
 		}
 	}
@@ -34,12 +32,8 @@ public class ResponseService {
 			m_IncomingReports.TryRemove(reports.Event, out _);
 		}
 
-		string chosenId = reports.Guids[m_Random.Next(0, reports.Guids.Count)];
-		if (m_ClientService.GetClient(chosenId, out BotsomeClient? client)) {
-			await client.RespondAsync(reports.Event);
-		} else {
-			m_Logger.LogWarning("Client closed after being chosen to respond {Guid} {Event.ChannelId} {Event.MessageId}", chosenId, reports.Event.ChannelId, reports.Event.MessageId);
-		}
+		BotsomeClient client = reports.Clients[m_Random.Next(0, reports.Clients.Count)];
+		await client.RespondAsync(reports.Event);
 	}
 
 	private class BotsomeReports {
@@ -47,10 +41,10 @@ public class ResponseService {
 		private readonly Timer m_Timer;
 		
 		public BotsomeEvent Event { get; }
-		public List<string> Guids { get; }
+		public List<BotsomeClient> Clients { get; }
 
 		public BotsomeReports(ResponseService service, BotsomeEvent evt) {
-			Guids = new List<string>(10);
+			Clients = new List<BotsomeClient>(10);
 			Event = evt;
 			m_Service = service;
 			m_Timer = new Timer();

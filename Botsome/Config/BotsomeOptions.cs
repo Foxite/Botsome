@@ -11,6 +11,4 @@ public class BotsomeOptions {
 	public double RandomDelaySeconds { get; set; }
 
 	public RandomDelayMode RandomDelayMode { get; set; }
-	
-	public List<BotsomeItem> Items { get; set; }
 }

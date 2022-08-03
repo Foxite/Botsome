@@ -1,7 +1,5 @@
-using System.Text.RegularExpressions;
 using DSharpPlus;
 using DSharpPlus.Entities;
-using DSharpPlus.EventArgs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,33 +7,22 @@ using Microsoft.Extensions.Options;
 namespace Botsome;
 
 public class BotsomeClient : IAsyncDisposable {
-	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d{18})>");
-	
 	private readonly DiscordClient m_Discord;
-	private readonly IOptions<BotsomeOptions> m_Options;
-	private ResponseService m_ResponseService;
 
 	public Dictionary<string, DiscordEmoji> Emotes { get; }
 	public string Token { get; }
 	public string Id { get; }
 
 	// ReSharper disable warning CS8618
-	private BotsomeClient(string token, DiscordClient discord, IOptions<BotsomeOptions> options, string id, ResponseService responseService, ILogger<BotsomeClient> logger) {
+	// TODO remove itemList parameter, assemble a list of all accessible guild emotes by name
+	private BotsomeClient(string token, DiscordClient discord, IOptions<ICollection<BotsomeItem>> itemList, string id, ILogger<BotsomeClient> logger, ClientEventService clientEventService) {
 		Emotes = new Dictionary<string, DiscordEmoji>();
 		m_Discord = discord;
-		m_Options = options;
-		m_ResponseService = responseService;
 		Token = token;
 		Id = id;
 
-		discord.MessageCreated += (client, ea) => {
-			_ = Task.Run(async () => {
-				try {
-					await OnMessageAsync(ea);
-				} catch (Exception ex) {
-					logger.LogError(ex, "Exception caught in off-thread MessageCreated handler");
-				}
-			});
+		discord.MessageCreated += (_, ea) => {
+			clientEventService.OnMessageCreated(this, ea);
 			return Task.CompletedTask;
 		};
 
@@ -44,7 +31,7 @@ public class BotsomeClient : IAsyncDisposable {
 				try {
 					List<string> emoteNames = 
 						(
-							from item in options.Value.Items
+							from item in itemList.Value
 							from response in item.Responses
 							where response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction && response.Response != null
 							select response.Response
@@ -78,22 +65,6 @@ public class BotsomeClient : IAsyncDisposable {
 		};
 	}
 
-	public async Task OnMessageAsync(MessageCreateEventArgs ea) {
-		foreach (BotsomeItem item in m_Options.Value.Items) {
-			if (!ea.Author.IsBot && AllowChannel(item, ea.Channel) && item.Trigger.Type switch {
-			    TriggerType.MessageContent => item.Trigger.ActualMessageRegex!.IsMatch(ea.Message.Content),
-			    TriggerType.EmoteNameAsMessage => EmoteRegex.Matches(ea.Message.Content).Select(match => match.Groups["name"].Value).Any(emoteName => item.Trigger.ActualEmoteNameRegex!.IsMatch(emoteName)),
-			    _ => false
-		    }) {
-				await m_ResponseService.ReportAsync(new BotsomeEvent(ea.Channel.Id, ea.Message.Id, item), this);
-			}
-		}
-	}
-
-	private static bool AllowChannel(BotsomeItem item, DiscordChannel channel) {
-		return item.Trigger.OnlyInChannels is not { Count: > 0 } || item.Trigger.OnlyInChannels.Contains(channel.Id);
-	}
-
 	public static async Task<BotsomeClient> CreateAsync(string token, string id, IServiceProvider isp) {
 		ILoggerFactory loggerFactory = isp.GetRequiredService<ILoggerFactory>().Scope("ID: {Id}", id);
 		
@@ -103,13 +74,13 @@ public class BotsomeClient : IAsyncDisposable {
 			LoggerFactory = loggerFactory
 		});
 
-		var options = isp.GetRequiredService<IOptions<BotsomeOptions>>();
-		var responseService = isp.GetRequiredService<ResponseService>();
+		var options = isp.GetRequiredService<IOptions<ICollection<BotsomeItem>>>();
+		var clientEventService = isp.GetRequiredService<ClientEventService>();
 		var logger = loggerFactory.CreateLogger<BotsomeClient>();
 
 		await discord.ConnectAsync();
 
-		return new BotsomeClient(token, discord, options, id, responseService, logger);
+		return new BotsomeClient(token, discord, options, id, logger, clientEventService);
 	}
 	
 	public async ValueTask DisposeAsync() {
