@@ -66,13 +66,13 @@ public class ExpiringDictionary<TKey, TValue> where TKey : notnull where TValue 
 		return ret;
 	}
 
-	public bool AddOrUpdate(TKey key, Func<TValue> valueFactory, Action<TValue> updater) {
+	public bool AddOrUpdate(TKey key, Func<TKey, TValue> valueFactory, Action<TKey, TValue> updater) {
 		lock (m_Lock) {
 			if (m_DictionaryImpl.TryGetValue(key, out Entry? entry)) {
-				updater(entry.Value);
+				updater(key, entry.Value);
 				return true;
 			} else {
-				Add(key, valueFactory());
+				Add(key, valueFactory(key));
 				return false;
 			}
 		}
@@ -93,9 +93,9 @@ public class ExpiringDictionary<TKey, TValue> where TKey : notnull where TValue 
 	private void OnExpired(Entry entry) {
 		lock (m_Lock) {
 			m_DictionaryImpl.Remove(entry.Key);
-		}
 
-		EntryExpired?.Invoke(this, new KeyValuePair<TKey, TValue>(entry.Key, entry.Value));
+			EntryExpired?.Invoke(this, new KeyValuePair<TKey, TValue>(entry.Key, entry.Value));
+		}
 	}
 
 	private class Entry {
@@ -111,7 +111,7 @@ public class ExpiringDictionary<TKey, TValue> where TKey : notnull where TValue 
 			Value = value;
 			
 			m_Timer = new Timer();
-			m_Timer.Interval = m_Dictionary.m_Expiration.Milliseconds;
+			m_Timer.Interval = m_Dictionary.m_Expiration.TotalMilliseconds;
 			m_Timer.AutoReset = false;
 			m_Timer.Elapsed += Elapsed;
 			m_Timer.Start();

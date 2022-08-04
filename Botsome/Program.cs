@@ -13,9 +13,11 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args);
 builder.ConfigureServices((hbc, isc) => {
 	isc.AddSingleton<Random>();
 	isc.AddSingleton<ClientService>();
-	isc.AddSingleton<ResponseService>();
+	isc.AddSingleton<ClientEventService>();
+	isc.AddSingleton<ItemsService, ConfigItemsService>();
 
 	isc.Configure<BotsomeOptions>(hbc.Configuration.GetSection("Botsome"));
+	isc.Configure<List<BotsomeItem>>(hbc.Configuration.GetSection("Items"));
 });
 
 IHost app = builder.Build();

@@ -16,7 +16,7 @@ services:
     command: -wait 2s -notify-sighup botsome -watch /templates/botsome.tmpl /botsome/bots.json
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - botsome:/botsome/
+      - ./botsome.conf:/botsome
 
 volumes:
   botsome:

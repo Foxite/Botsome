@@ -15,14 +15,17 @@ public class BotsomeClient : IAsyncDisposable {
 
 	// ReSharper disable warning CS8618
 	// TODO remove itemList parameter, assemble a list of all accessible guild emotes by name
-	private BotsomeClient(string token, DiscordClient discord, IOptions<ICollection<BotsomeItem>> itemList, string id, ILogger<BotsomeClient> logger, ClientEventService clientEventService) {
+	private BotsomeClient(string token, DiscordClient discord, IOptions<List<BotsomeItem>> itemList, string id, ILogger<BotsomeClient> logger, ClientEventService clientEventService) {
 		Emotes = new Dictionary<string, DiscordEmoji>();
 		m_Discord = discord;
 		Token = token;
 		Id = id;
 
 		discord.MessageCreated += (_, ea) => {
-			clientEventService.OnMessageCreated(this, ea);
+			if (!ea.Author.IsBot) {
+				clientEventService.OnMessageCreated(this, ea);
+			}
+
 			return Task.CompletedTask;
 		};
 
@@ -74,7 +77,7 @@ public class BotsomeClient : IAsyncDisposable {
 			LoggerFactory = loggerFactory
 		});
 
-		var options = isp.GetRequiredService<IOptions<ICollection<BotsomeItem>>>();
+		var options = isp.GetRequiredService<IOptions<List<BotsomeItem>>>();
 		var clientEventService = isp.GetRequiredService<ClientEventService>();
 		var logger = loggerFactory.CreateLogger<BotsomeClient>();
 
@@ -88,12 +91,12 @@ public class BotsomeClient : IAsyncDisposable {
 		m_Discord.Dispose();
 	}
 
-	public async Task RespondAsync(BotsomeEvent evt) {
-		DiscordChannel channel = await m_Discord.GetChannelAsync(evt.ChannelId);
-		foreach (BotsomeResponse response in evt.Item.Responses) {
+	public async Task RespondAsync(EventIdentifier eventIdentifier, BotsomeItem item) {
+		DiscordChannel channel = await m_Discord.GetChannelAsync(eventIdentifier.ChannelId);
+		foreach (BotsomeResponse response in item.Responses) {
 			await (response.Type switch {
-				ResponseType.EmojiAsReaction => (await channel.GetMessageAsync(evt.MessageId)).CreateReactionAsync(DiscordEmoji.FromUnicode(response.Response)),
-				ResponseType.EmoteNameAsReaction => (await channel.GetMessageAsync(evt.MessageId)).CreateReactionAsync(Emotes[response.Response]),
+				ResponseType.EmojiAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(DiscordEmoji.FromUnicode(response.Response)),
+				ResponseType.EmoteNameAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(Emotes[response.Response]),
 				ResponseType.EmoteNameAsMessage => channel.SendMessageAsync(Emotes[response.Response]),
 				ResponseType.Message => channel.SendMessageAsync(response.Response),
 				//_ => throw new ArgumentOutOfRangeException()

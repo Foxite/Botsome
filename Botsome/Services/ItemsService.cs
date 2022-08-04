@@ -12,14 +12,14 @@ public abstract class ItemsService {
 public class ConfigItemsService : ItemsService {
 	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d{18})>");
 
-	private readonly IOptions<BotsomeOptions> m_Options;
+	private readonly IOptions<List<BotsomeItem>> m_Options;
 
-	public ConfigItemsService(IOptions<BotsomeOptions> options) {
+	public ConfigItemsService(IOptions<List<BotsomeItem>> options) {
 		m_Options = options;
 	}
 	
 	public override BotsomeItem? GetItem(MessageCreateEventArgs eventArgs) {
-		foreach (BotsomeItem item in m_Options.Value.Items) {
+		foreach (BotsomeItem item in m_Options.Value) {
 			if (!eventArgs.Author.IsBot && AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs)) {
 				return item;
 			}

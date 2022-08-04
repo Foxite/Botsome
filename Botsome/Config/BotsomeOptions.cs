@@ -8,7 +8,8 @@ public class BotsomeOptions {
 	///
 	/// In RandomDelayMode.Fixed, this will be the exact delay. In Auto, this will be the initial and maximum delay.
 	/// </summary>
-	public double RandomDelaySeconds { get; set; }
+	public double RandomResponseTimeSeconds { get; set; }
+	public TimeSpan RandomResponseTime => TimeSpan.FromSeconds(RandomResponseTimeSeconds);
 
-	public RandomDelayMode RandomDelayMode { get; set; }
+	public RandomDelayMode RandomResponseTimeMode { get; set; }
 }
