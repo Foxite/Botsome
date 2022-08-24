@@ -1,6 +1,10 @@
-{
+[
 {{ range $index, $container := whereLabelExists $ "me.foxite.botsome" }}
-    {{ $token_envvar := (when (contains $container.Labels "me.foxite.botsome.envvar") (index $container.Labels "me.foxite.botsome.envvar") "BOT_TOKEN") }}
-    {{ printf "\"%s\": \"%s\"," $container.ID (index $container.Env $token_envvar) }}
+    {
+        "id": "{{ printf $container.ID }}",
+        {{ $token_envvar := (when (contains $container.Labels "me.foxite.botsome.envvar") (index $container.Labels "me.foxite.botsome.envvar") "BOT_TOKEN") }}
+        "token": "{{ printf (index $container.Env $token_envvar) }}",
+        "groups": "{{ printf (when (contains $container.Labels "me.foxite.botsome.groups") (index $container.Labels "me.foxite.botsome.groups") "") }} all"
+    },
 {{ end }}
-}
+]

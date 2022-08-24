@@ -6,6 +6,7 @@ services:
     build: Botsome
     environment:
       Logging__Console__FormatterName: simple
+      DOTNET_USE_POLLING_FILE_WATCHER: true
     volumes:
       - botsome:/botsome/
       - ./Botsome/appsettings.json:/app/appsettings.json
