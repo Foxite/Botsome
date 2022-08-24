@@ -1,15 +1,13 @@
 using System.Runtime.InteropServices;
 using Botsome;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args);
 
-// Add services to the container.
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.ConfigureServices((hbc, isc) => {
 	isc.AddSingleton<Random>();
 	isc.AddSingleton<ClientService>();
@@ -24,8 +22,8 @@ TaskScheduler.UnobservedTaskException += (sender, eventArgs) => app.Services.Get
 
 async Task UpdateBotsAsync() {
 	var clientService = app.Services.GetRequiredService<ClientService>();
-	IEnumerable<(string Id, string Token)> botStrings = JObject.Parse(await File.ReadAllTextAsync(Environment.GetEnvironmentVariable("BOTSOME_FILE") ?? "/botsome/bots.json")).Properties().Select(prop => (Id: prop.Name, Token: prop.Value.ToObject<string>()!));
-	await clientService.UpdateList(botStrings);
+	var bots = JsonConvert.DeserializeObject<Bot[]>(await File.ReadAllTextAsync(Environment.GetEnvironmentVariable("BOTSOME_FILE") ?? "/botsome/bots.json"))!;
+	await clientService.UpdateList(bots);
 }
 
 PosixSignalRegistration.Create(PosixSignal.SIGHUP, _ => {

@@ -18,15 +18,17 @@ public class BotsomeClient : IAsyncDisposable {
 	public Dictionary<string, DiscordEmoji> Emotes { get; }
 	public string Token { get; }
 	public string Id { get; }
+	public string[] Groups { get; set; }
 
 	// ReSharper disable warning CS8618
-	private BotsomeClient(string token, DiscordClient discord, IOptions<BotsomeOptions> options, string id, ResponseService responseService, ILogger<BotsomeClient> logger) {
+	private BotsomeClient(Bot bot, DiscordClient discord, IOptions<BotsomeOptions> options, ResponseService responseService, ILogger<BotsomeClient> logger) {
 		Emotes = new Dictionary<string, DiscordEmoji>();
 		m_Discord = discord;
 		m_Options = options;
 		m_ResponseService = responseService;
-		Token = token;
-		Id = id;
+		Token = bot.Token;
+		Id = bot.Id;
+		Groups = bot.ParsedGroups;
 
 		discord.MessageCreated += (client, ea) => {
 			_ = Task.Run(async () => {
@@ -94,11 +96,11 @@ public class BotsomeClient : IAsyncDisposable {
 		return item.Trigger.OnlyInChannels is not { Count: > 0 } || item.Trigger.OnlyInChannels.Contains(channel.Id);
 	}
 
-	public static async Task<BotsomeClient> CreateAsync(string token, string id, IServiceProvider isp) {
-		ILoggerFactory loggerFactory = isp.GetRequiredService<ILoggerFactory>().Scope("ID: {Id}", id);
+	public static async Task<BotsomeClient> CreateAsync(Bot bot, IServiceProvider isp) {
+		ILoggerFactory loggerFactory = isp.GetRequiredService<ILoggerFactory>().Scope("ID: {Id}", bot.Id);
 		
 		var discord = new DiscordClient(new DiscordConfiguration() {
-			Token = token,
+			Token = bot.Token,
 			Intents = DiscordIntents.GuildMessages,
 			LoggerFactory = loggerFactory
 		});
@@ -109,7 +111,7 @@ public class BotsomeClient : IAsyncDisposable {
 
 		await discord.ConnectAsync();
 
-		return new BotsomeClient(token, discord, options, id, responseService, logger);
+		return new BotsomeClient(bot, discord, options, responseService, logger);
 	}
 	
 	public async ValueTask DisposeAsync() {

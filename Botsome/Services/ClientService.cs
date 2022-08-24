@@ -14,9 +14,9 @@ public class ClientService {
 		m_Logger = logger;
 	}
 
-	public async Task UpdateList(IEnumerable<(string Id, string Token)> bots) {
+	public async Task UpdateList(ICollection<Bot> bots) {
 		KeyValuePair<string, BotsomeClient>[] toRemove = m_Clients.Where(kvp => !bots.Select(bot => bot.Id).Contains(kvp.Key)).ToArray();
-		(string Id, string Token)[] toAdd = bots.Select(bot => bot).Where(kvp => !m_Clients.ContainsKey(kvp.Id)).ToArray();
+		Bot[] toAdd = bots.Select(bot => bot).Where(kvp => !m_Clients.ContainsKey(kvp.Id)).ToArray();
 
 		foreach ((string? id, BotsomeClient? client) in toRemove) {
 			try {
@@ -30,15 +30,15 @@ public class ClientService {
 			}
 		}
 
-		foreach ((string id, string token) in toAdd) {
+		foreach (Bot bot in toAdd) {
 			try {
-				var client = await BotsomeClient.CreateAsync(token, id, m_ServiceProvider);
-				if (!m_Clients.TryAdd(id, client)) {
+				var client = await BotsomeClient.CreateAsync(bot, m_ServiceProvider);
+				if (!m_Clients.TryAdd(bot.Id, client)) {
 					await client.DisposeAsync();
-					m_Logger.LogWarning("Tried to add a bot with an ID that was already present: ID {id}, token ending in {tokenSuffix}", id, token[^3..]);
+					m_Logger.LogWarning("Tried to add a bot with an ID that was already present: ID {id}, token ending in {tokenSuffix}", bot.Id, bot.Token[^3..]);
 				}
 			} catch (Exception e) {
-				m_Logger.LogCritical(e, "Caught exception while creating bot with ID {id}", id);
+				m_Logger.LogCritical(e, "Caught exception while creating bot with ID {id}", bot.Id);
 			}
 		}
 	}
