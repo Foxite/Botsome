@@ -12,7 +12,7 @@ public class BotsomeClient : IAsyncDisposable {
 	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d{18})>");
 	
 	private readonly DiscordClient m_Discord;
-	private readonly IOptions<BotsomeOptions> m_Options;
+	private readonly IOptionsMonitor<BotsomeOptions> m_Options;
 	private ResponseService m_ResponseService;
 
 	public Dictionary<string, DiscordEmoji> Emotes { get; }
@@ -46,7 +46,7 @@ public class BotsomeClient : IAsyncDisposable {
 				try {
 					List<string> emoteNames = 
 						(
-							from item in options.Value.Items
+							from item in options.CurrentValue.Items
 							from response in item.Responses
 							where response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction && response.Response != null
 							select response.Response
@@ -81,7 +81,7 @@ public class BotsomeClient : IAsyncDisposable {
 	}
 
 	public async Task OnMessageAsync(MessageCreateEventArgs ea) {
-		foreach (BotsomeItem item in m_Options.Value.Items) {
+		foreach (BotsomeItem item in m_Options.CurrentValue.Items) {
 			if (!ea.Author.IsBot && AllowChannel(item, ea.Channel) && item.Trigger.Type switch {
 			    TriggerType.MessageContent => item.Trigger.ActualMessageRegex!.IsMatch(ea.Message.Content),
 			    TriggerType.EmoteNameAsMessage => EmoteRegex.Matches(ea.Message.Content).Select(match => match.Groups["name"].Value).Any(emoteName => item.Trigger.ActualEmoteNameRegex!.IsMatch(emoteName)),
@@ -105,7 +105,7 @@ public class BotsomeClient : IAsyncDisposable {
 			LoggerFactory = loggerFactory
 		});
 
-		var options = isp.GetRequiredService<IOptions<BotsomeOptions>>();
+		var options = isp.GetRequiredService<IOptionsMonitor<BotsomeOptions>>();
 		var responseService = isp.GetRequiredService<ResponseService>();
 		var logger = loggerFactory.CreateLogger<BotsomeClient>();
 
