@@ -19,12 +19,15 @@ public class ResponseService {
 	}
 
 	public async Task ReportAsync(BotsomeEvent evt, BotsomeClient client) {
-		if (evt.Item.RespondUsing == BotSelection.All) {
-			await client.RespondAsync(evt);
-		} else { // BotSelection.Random
-			lock (m_ReportLock) {
-				BotsomeReports report = m_IncomingReports.GetOrAdd(evt, be => new BotsomeReports(this, be));
-				report.Guids.Add(client.Id);
+		if (client.Groups.Contains(evt.Item.RespondGroup)) {
+			if (evt.Item.RespondMode == BotSelection.All) {
+				await client.RespondAsync(evt);
+			} else {
+				// BotSelection.Random
+				lock (m_ReportLock) {
+					BotsomeReports report = m_IncomingReports.GetOrAdd(evt, be => new BotsomeReports(this, be));
+					report.Guids.Add(client.Id);
+				}
 			}
 		}
 	}
