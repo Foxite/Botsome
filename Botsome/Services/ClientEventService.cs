@@ -71,13 +71,14 @@ public sealed class ClientEventService : IDisposable {
 			}
 
 			Debug.Assert(trackedEvent.BotsomeItem == null || trackedEvent.BotsomeItem.HasValue);
+
 			if (trackedEvent.BotsomeItem == null || trackedEvent.BotsomeItem.Value!.RespondMode == BotSelection.Random) {
 				trackedEvent.Reporters.Add(reportedEvent.Client);
 			} else if (trackedEvent.BotsomeItem.Value.RespondMode == BotSelection.All) {
 				trackedEvent.StopTimer();
 
 				void RespondLocal(BotsomeClient client) {
-					if (client.Groups.Contains(trackedEvent.BotsomeItem.Value.RespondGroup)) {
+					if (client.CanRespond(trackedEvent.BotsomeItem.Value) && client.Groups.Contains(trackedEvent.BotsomeItem.Value.RespondGroup)) {
 						Respond(client, eventIdentifier, trackedEvent);
 					}
 				}
@@ -163,8 +164,15 @@ public sealed class ClientEventService : IDisposable {
 			m_RespondTimer.Dispose();
 			// BotSelection.All will be handled upon reception
 			if (BotsomeItem.HasValue && BotsomeItem.Value != null && BotsomeItem.Value.RespondMode == BotSelection.Random) {
-				int index = m_ClientEventService.m_Random.Next(0, Reporters.Count);
-				BotsomeClient selectedClient = Reporters[index];
+				List<BotsomeClient> eligibleReporters = Reporters.Where(reporter => reporter.CanRespond(BotsomeItem.Value!)).ToList();
+
+				if (eligibleReporters.Count == 0) {
+					Console.WriteLine("No eligible responders");
+					return;
+				}
+				
+				int index = m_ClientEventService.m_Random.Next(0, eligibleReporters.Count);
+				BotsomeClient selectedClient = eligibleReporters[index];
 				m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this);
 			}
 		}

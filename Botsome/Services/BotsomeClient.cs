@@ -14,9 +14,7 @@ public class BotsomeClient : IAsyncDisposable {
 	public string Id { get; }
 	public string[] Groups { get; }
 
-	// ReSharper disable warning CS8618
-	// TODO remove itemList parameter, assemble a list of all accessible guild emotes by name
-	private BotsomeClient(Bot bot, DiscordClient discord, IOptions<List<BotsomeItem>> itemList, ILogger<BotsomeClient> logger, ClientEventService clientEventService) {
+	private BotsomeClient(Bot bot, DiscordClient discord, ILogger<BotsomeClient> logger, ClientEventService clientEventService) {
 		Emotes = new Dictionary<string, DiscordEmoji>();
 		m_Discord = discord;
 		Token = bot.Token;
@@ -34,33 +32,12 @@ public class BotsomeClient : IAsyncDisposable {
 		discord.Ready += (_, _) => {
 			Task.Run(async () => {
 				try {
-					List<string> emoteNames = 
-						(
-							from item in itemList.Value
-							from response in item.Responses
-							where response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction && response.Response != null
-							select response.Response
-						)
-						.Distinct()
-						.ToList();
-
 					foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
-						IReadOnlyList<DiscordGuildEmoji>? guildEmojis = await kvp.Value.GetEmojisAsync();
+						IReadOnlyList<DiscordGuildEmoji>? guildEmotes = await kvp.Value.GetEmojisAsync();
 						// ReSharper disable warning CS8601
-						foreach (string emoteName in emoteNames) {
-							if (Emotes.ContainsKey(emoteName)) {
-								continue;
-							}
-
-							DiscordEmoji? emoji = guildEmojis.FirstOrDefault(emoji => emoji.Name == emoteName);
-							if (emoji != null) {
-								Emotes[emoteName] = emoji;
-							}
+						foreach (DiscordGuildEmoji emote in guildEmotes) {
+							Emotes[emote.Name] = emote;
 						}
-					}
-
-					if (emoteNames.Count != Emotes.Count) {
-						logger.LogCritical("Did not find emotes with names: {Names}", string.Join(", ", emoteNames.Where(emoteName => !Emotes.ContainsKey(emoteName))));
 					}
 				} catch (Exception ex) {
 					logger.LogCritical(ex, "Exception caught while collecting emotes");
@@ -79,13 +56,12 @@ public class BotsomeClient : IAsyncDisposable {
 			LoggerFactory = loggerFactory
 		});
 
-		var options = isp.GetRequiredService<IOptions<List<BotsomeItem>>>();
 		var clientEventService = isp.GetRequiredService<ClientEventService>();
 		var logger = loggerFactory.CreateLogger<BotsomeClient>();
 
 		await discord.ConnectAsync();
 
-		return new BotsomeClient(bot, discord, options, logger, clientEventService);
+		return new BotsomeClient(bot, discord, logger, clientEventService);
 	}
 	
 	public async ValueTask DisposeAsync() {
@@ -104,5 +80,13 @@ public class BotsomeClient : IAsyncDisposable {
 				//_ => throw new ArgumentOutOfRangeException()
 			});
 		}
+	}
+
+	public bool CanRespond(BotsomeItem botsomeItem) {
+		IEnumerable<string> requiredEmotes = botsomeItem.Responses
+			.Where(response => response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction)
+			.Select(response => response.Response);
+				
+		return requiredEmotes.All(emote => Emotes.ContainsKey(emote));
 	}
 }
