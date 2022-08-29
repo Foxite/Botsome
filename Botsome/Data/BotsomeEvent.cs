@@ -4,13 +4,11 @@ public class BotsomeEvent : IEquatable<BotsomeEvent> {
 	public ulong ChannelId { get; }
 	public ulong MessageId { get; }
 	public BotsomeItem Item { get; }
-	public string? Data { get; }
 
-	public BotsomeEvent(ulong channelId, ulong messageId, BotsomeItem item, string? data = null) {
+	public BotsomeEvent(ulong channelId, ulong messageId, BotsomeItem item) {
 		ChannelId = channelId;
 		MessageId = messageId;
 		Item = item;
-		Data = data;
 	}
 	
 	public bool Equals(BotsomeEvent? other) {
