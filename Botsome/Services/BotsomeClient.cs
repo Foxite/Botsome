@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace Botsome;
 
 public class BotsomeClient : IAsyncDisposable {
-	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d{18})>");
+	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d{5,23})>");
 	
 	private readonly DiscordClient m_Discord;
 	private readonly IOptionsMonitor<BotsomeOptions> m_Options;
