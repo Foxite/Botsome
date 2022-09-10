@@ -1,10 +1,17 @@
 using System.Text.RegularExpressions;
+using DSharpPlus.Entities;
 using Newtonsoft.Json;
 
 namespace Botsome;
 
 public class BotsomeOptions {
+	public Dictionary<string, BotActivity> Status { get; set; }
 	public List<BotsomeItem> Items { get; set; }
+}
+
+public class BotActivity {
+	public ActivityType Type { get; set; }
+	public string Message { get; set; }
 }
 
 public class BotsomeItem {

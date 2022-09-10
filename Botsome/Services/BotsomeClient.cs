@@ -13,7 +13,8 @@ public class BotsomeClient : IAsyncDisposable {
 	
 	private readonly DiscordClient m_Discord;
 	private readonly IOptionsMonitor<BotsomeOptions> m_Options;
-	private ResponseService m_ResponseService;
+	private readonly ResponseService m_ResponseService;
+	private readonly IDisposable m_OnChangeListener;
 
 	public Dictionary<string, DiscordEmoji> Emotes { get; }
 	public string Token { get; }
@@ -30,6 +31,22 @@ public class BotsomeClient : IAsyncDisposable {
 		Id = bot.Id;
 		Groups = bot.ParsedGroups;
 
+		async Task UpdateStatus(BotsomeOptions newOptions) {
+			if (!newOptions.Status.TryGetValue(bot.Groups, out BotActivity? status)) {
+				foreach (string group in bot.ParsedGroups) {
+					if (newOptions.Status.TryGetValue(group, out status)) {
+						break;
+					}
+				}
+			}
+
+			if (status != null) {
+				await m_Discord.UpdateStatusAsync(new DiscordActivity(status.Message, status.Type));
+			}
+		}
+		
+		m_OnChangeListener = options.OnChange(newOptions => UpdateStatus(newOptions));
+
 		discord.MessageCreated += (client, ea) => {
 			_ = Task.Run(async () => {
 				try {
@@ -43,6 +60,8 @@ public class BotsomeClient : IAsyncDisposable {
 
 		discord.Ready += (_, _) => {
 			Task.Run(async () => {
+				await UpdateStatus(options.CurrentValue);
+				
 				try {
 					List<string> emoteNames = 
 						(
@@ -117,6 +136,7 @@ public class BotsomeClient : IAsyncDisposable {
 	public async ValueTask DisposeAsync() {
 		await m_Discord.DisconnectAsync();
 		m_Discord.Dispose();
+		m_OnChangeListener.Dispose();
 	}
 
 	public async Task RespondAsync(BotsomeEvent evt) {
