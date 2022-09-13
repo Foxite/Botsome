@@ -32,16 +32,18 @@ public class BotsomeClient : IAsyncDisposable {
 		Groups = bot.ParsedGroups;
 
 		async Task UpdateStatus(BotsomeOptions newOptions) {
-			if (!newOptions.Status.TryGetValue(bot.Groups, out BotActivity? status)) {
-				foreach (string group in bot.ParsedGroups) {
-					if (newOptions.Status.TryGetValue(group, out status)) {
-						break;
-					}
+			BotActivity? activity = null;
+			
+			foreach (string group in bot.ParsedGroups) {
+				if (newOptions.Status.TryGetValue(group, out activity)) {
+					break;
 				}
 			}
 
-			if (status != null) {
-				await m_Discord.UpdateStatusAsync(new DiscordActivity(status.Message, status.Type));
+			if (activity != null) {
+				await m_Discord.UpdateStatusAsync(new DiscordActivity(activity.Message, activity.Type));
+			} else {
+				await m_Discord.UpdateStatusAsync();
 			}
 		}
 		
