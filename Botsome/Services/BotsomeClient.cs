@@ -19,7 +19,7 @@ public class BotsomeClient : IAsyncDisposable {
 	public Dictionary<string, DiscordEmoji> Emotes { get; }
 	public string Token { get; }
 	public string Id { get; }
-	public string[] Groups { get; set; }
+	public string[] Groups { get; }
 
 	// ReSharper disable warning CS8618
 	private BotsomeClient(Bot bot, DiscordClient discord, IOptionsMonitor<BotsomeOptions> options, ResponseService responseService, ILogger<BotsomeClient> logger) {
