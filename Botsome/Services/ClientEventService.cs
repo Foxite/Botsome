@@ -10,6 +10,9 @@ using Timer = System.Timers.Timer;
 
 namespace Botsome;
 
+/// <summary>
+/// Receives events from <see cref="BotsomeClient"/>s and orchestrates them to respond.
+/// </summary>
 public sealed class ClientEventService : IDisposable {
 	private readonly IOptions<BotsomeOptions> m_Options;
 	private readonly ILogger<ClientEventService> m_Logger;

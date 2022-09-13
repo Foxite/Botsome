@@ -6,15 +6,18 @@ using Microsoft.Extensions.Options;
 
 namespace Botsome;
 
+/// <summary>
+/// Receives events from a <see cref="DiscordClient"/> and passes them to <see cref="ClientEventService"/>, and carries out responses for CES.
+/// </summary>
 public class BotsomeClient : IAsyncDisposable {
 	private readonly DiscordClient m_Discord;
 	private readonly IDisposable m_OnChangeListener;
+	private readonly Dictionary<string, DiscordEmoji> m_Emotes;
 
-	public Dictionary<string, DiscordEmoji> Emotes { get; }
 	public Bot Bot { get; }
 
 	private BotsomeClient(Bot bot, DiscordClient discord, ILogger<BotsomeClient> logger, ClientEventService clientEventService, IOptionsMonitor<StatusOptions> statusOptions) {
-		Emotes = new Dictionary<string, DiscordEmoji>();
+		m_Emotes = new Dictionary<string, DiscordEmoji>();
 		m_Discord = discord;
 		Bot = bot;
 
@@ -49,10 +52,9 @@ public class BotsomeClient : IAsyncDisposable {
 				
 				try {
 					foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
-						IReadOnlyList<DiscordGuildEmoji>? guildEmotes = await kvp.Value.GetEmojisAsync();
-						// ReSharper disable warning CS8601
+						IReadOnlyList<DiscordGuildEmoji> guildEmotes = await kvp.Value.GetEmojisAsync();
 						foreach (DiscordGuildEmoji emote in guildEmotes) {
-							Emotes[emote.Name] = emote;
+							m_Emotes[emote.Name] = emote;
 						}
 					}
 				} catch (Exception ex) {
@@ -92,8 +94,8 @@ public class BotsomeClient : IAsyncDisposable {
 		foreach (BotsomeResponse response in item.Responses) {
 			await (response.Type switch {
 				ResponseType.EmojiAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(DiscordEmoji.FromUnicode(response.Response)),
-				ResponseType.EmoteNameAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(Emotes[response.Response]),
-				ResponseType.EmoteNameAsMessage => channel.SendMessageAsync(Emotes[response.Response]),
+				ResponseType.EmoteNameAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(m_Emotes[response.Response]),
+				ResponseType.EmoteNameAsMessage => channel.SendMessageAsync(m_Emotes[response.Response]),
 				ResponseType.Message => channel.SendMessageAsync(response.Response),
 				//_ => throw new ArgumentOutOfRangeException()
 			});
@@ -105,6 +107,7 @@ public class BotsomeClient : IAsyncDisposable {
 			.Where(response => response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction)
 			.Select(response => response.Response);
 				
-		return requiredEmotes.All(emote => Emotes.ContainsKey(emote));
+		// TODO check if we have the permissions to respond in the channel/guild
+		return requiredEmotes.All(emote => m_Emotes.ContainsKey(emote));
 	}
 }

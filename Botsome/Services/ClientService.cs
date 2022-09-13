@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 
 namespace Botsome; 
 
+/// <summary>
+/// Responsible for starting and stopping <see cref="BotsomeClient"/>s, and keeping track of the ones that are active.
+/// </summary>
 public class ClientService {
 	private readonly ILogger<ClientService> m_Logger;
 	private readonly ConcurrentDictionary<string, BotsomeClient> m_Clients = new();
@@ -12,10 +14,6 @@ public class ClientService {
 	public ClientService(ILogger<ClientService> logger, IServiceProvider serviceProvider) {
 		m_ServiceProvider = serviceProvider;
 		m_Logger = logger;
-	}
-
-	public bool GetClient(string id, [NotNullWhen(true)] out BotsomeClient? client) {
-		return m_Clients.TryGetValue(id, out client);
 	}
 
 	public async Task StartBotAsync(Bot bot) {

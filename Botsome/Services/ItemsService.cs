@@ -5,6 +5,9 @@ using Microsoft.Extensions.Options;
 
 namespace Botsome; 
 
+/// <summary>
+/// Provides BotsomeItems.
+/// </summary>
 public abstract class ItemsService {
 	public abstract BotsomeItem? GetItem(MessageCreateEventArgs eventArgs);
 }
@@ -12,15 +15,15 @@ public abstract class ItemsService {
 public class ConfigItemsService : ItemsService {
 	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d{18})>");
 
-	private readonly IOptions<List<BotsomeItem>> m_Options;
+	private readonly IOptionsMonitor<List<BotsomeItem>> m_Options;
 
-	public ConfigItemsService(IOptions<List<BotsomeItem>> options) {
+	public ConfigItemsService(IOptionsMonitor<List<BotsomeItem>> options) {
 		m_Options = options;
 	}
 	
 	public override BotsomeItem? GetItem(MessageCreateEventArgs eventArgs) {
-		foreach (BotsomeItem item in m_Options.Value) {
-			if (!eventArgs.Author.IsBot && AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs)) {
+		foreach (BotsomeItem item in m_Options.CurrentValue) {
+			if (AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs)) {
 				return item;
 			}
 		}
