@@ -19,22 +19,24 @@ public class BotsomeClient : IAsyncDisposable {
 		Bot = bot;
 
 		async Task UpdateStatus(StatusOptions newOptions) {
-			if (!newOptions.Groups.TryGetValue(bot.Groups, out BotActivity? status)) {
-				foreach (string group in bot.ParsedGroups) {
-					if (newOptions.Groups.TryGetValue(group, out status)) {
-						break;
-					}
+			BotActivity? activity = null;
+			
+			foreach (string group in bot.ParsedGroups) {
+				if (newOptions.Groups.TryGetValue(group, out activity)) {
+					break;
 				}
 			}
 
-			if (status != null) {
-				await m_Discord.UpdateStatusAsync(new DiscordActivity(status.Message, status.Type));
+			if (activity != null) {
+				await m_Discord.UpdateStatusAsync(new DiscordActivity(activity.Message, activity.Type));
+			} else {
+				await m_Discord.UpdateStatusAsync();
 			}
 		}
 		
 		m_OnChangeListener = statusOptions.OnChange(newOptions => UpdateStatus(newOptions));
 
-		discord.MessageCreated += (client, ea) => {
+		discord.MessageCreated += (_, ea) => {
 			if (!ea.Author.IsBot) {
 				clientEventService.OnMessageCreated(this, ea);
 			}
