@@ -2,34 +2,49 @@ using DSharpPlus;
 using DSharpPlus.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Botsome;
 
 public class BotsomeClient : IAsyncDisposable {
 	private readonly DiscordClient m_Discord;
+	private readonly IDisposable m_OnChangeListener;
 
 	public Dictionary<string, DiscordEmoji> Emotes { get; }
-	public string Token { get; }
-	public string Id { get; }
-	public string[] Groups { get; }
+	public Bot Bot { get; }
 
-	private BotsomeClient(Bot bot, DiscordClient discord, ILogger<BotsomeClient> logger, ClientEventService clientEventService) {
+	private BotsomeClient(Bot bot, DiscordClient discord, ILogger<BotsomeClient> logger, ClientEventService clientEventService, IOptionsMonitor<StatusOptions> statusOptions) {
 		Emotes = new Dictionary<string, DiscordEmoji>();
 		m_Discord = discord;
-		Token = bot.Token;
-		Id = bot.Id;
-		Groups = bot.ParsedGroups;
+		Bot = bot;
 
-		discord.MessageCreated += (_, ea) => {
+		async Task UpdateStatus(StatusOptions newOptions) {
+			if (!newOptions.Groups.TryGetValue(bot.Groups, out BotActivity? status)) {
+				foreach (string group in bot.ParsedGroups) {
+					if (newOptions.Groups.TryGetValue(group, out status)) {
+						break;
+					}
+				}
+			}
+
+			if (status != null) {
+				await m_Discord.UpdateStatusAsync(new DiscordActivity(status.Message, status.Type));
+			}
+		}
+		
+		m_OnChangeListener = statusOptions.OnChange(newOptions => UpdateStatus(newOptions));
+
+		discord.MessageCreated += (client, ea) => {
 			if (!ea.Author.IsBot) {
 				clientEventService.OnMessageCreated(this, ea);
 			}
-
 			return Task.CompletedTask;
 		};
 
 		discord.Ready += (_, _) => {
 			Task.Run(async () => {
+				await UpdateStatus(statusOptions.CurrentValue);
+				
 				try {
 					foreach (KeyValuePair<ulong, DiscordGuild> kvp in m_Discord.Guilds) {
 						IReadOnlyList<DiscordGuildEmoji>? guildEmotes = await kvp.Value.GetEmojisAsync();
@@ -57,15 +72,17 @@ public class BotsomeClient : IAsyncDisposable {
 
 		var clientEventService = isp.GetRequiredService<ClientEventService>();
 		var logger = loggerFactory.CreateLogger<BotsomeClient>();
+		var options = isp.GetRequiredService<IOptionsMonitor<StatusOptions>>();
 
 		await discord.ConnectAsync();
 
-		return new BotsomeClient(bot, discord, logger, clientEventService);
+		return new BotsomeClient(bot, discord, logger, clientEventService, options);
 	}
 	
 	public async ValueTask DisposeAsync() {
 		await m_Discord.DisconnectAsync();
 		m_Discord.Dispose();
+		m_OnChangeListener.Dispose();
 	}
 
 	public async Task RespondAsync(EventIdentifier eventIdentifier, BotsomeItem item) {

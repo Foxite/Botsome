@@ -78,7 +78,7 @@ public sealed class ClientEventService : IDisposable {
 				trackedEvent.StopTimer();
 
 				void RespondLocal(BotsomeClient client) {
-					if (client.CanRespond(trackedEvent.BotsomeItem.Value) && client.Groups.Contains(trackedEvent.BotsomeItem.Value.RespondGroup)) {
+					if (client.CanRespond(trackedEvent.BotsomeItem.Value) && client.Bot.Groups.Contains(trackedEvent.BotsomeItem.Value.RespondGroup)) {
 						Respond(client, eventIdentifier, trackedEvent);
 					}
 				}
