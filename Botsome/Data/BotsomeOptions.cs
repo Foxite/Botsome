@@ -1,6 +1,7 @@
+#pragma warning disable CS8618
+
 using System.Text.RegularExpressions;
 using DSharpPlus.Entities;
-using Newtonsoft.Json;
 
 namespace Botsome;
 

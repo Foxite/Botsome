@@ -8,16 +8,5 @@ services:
       Logging__Console__FormatterName: simple
       DOTNET_USE_POLLING_FILE_WATCHER: true
     volumes:
-      - botsome:/botsome/
       - ./Botsome/appsettings.json:/app/appsettings.json
-  dockergen:
-    build:
-      context: dockergen
-      dockerfile: Dockerfile
-    command: -wait 2s -notify-sighup botsome -watch /templates/botsome.tmpl /botsome/bots.json
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./botsome.conf:/botsome
-
-volumes:
-  botsome:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
