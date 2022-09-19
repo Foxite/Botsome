@@ -22,7 +22,7 @@ public class BotsomeClient : IAsyncDisposable {
 	public string[] Groups { get; }
 
 	// ReSharper disable warning CS8618
-	private BotsomeClient(Bot bot, DiscordClient discord, IOptionsMonitor<BotsomeOptions> options, ResponseService responseService, ILogger<BotsomeClient> logger) {
+	private BotsomeClient(Bot bot, DiscordClient discord, IOptionsMonitor<BotsomeOptions> options, ResponseService responseService, ILogger<BotsomeClient> logger, Random random) {
 		Emotes = new Dictionary<string, DiscordEmoji>();
 		m_Discord = discord;
 		m_Options = options;
@@ -35,7 +35,8 @@ public class BotsomeClient : IAsyncDisposable {
 			BotActivity? activity = null;
 			
 			foreach (string group in bot.ParsedGroups) {
-				if (newOptions.Status.TryGetValue(group, out activity)) {
+				if (newOptions.Status.TryGetValue(group, out var activities)) {
+					activity = activities[random.Next(0, activities.Length)];
 					break;
 				}
 			}
@@ -129,10 +130,11 @@ public class BotsomeClient : IAsyncDisposable {
 		var options = isp.GetRequiredService<IOptionsMonitor<BotsomeOptions>>();
 		var responseService = isp.GetRequiredService<ResponseService>();
 		var logger = loggerFactory.CreateLogger<BotsomeClient>();
+		var random = isp.GetRequiredService<Random>();
 
 		await discord.ConnectAsync();
 
-		return new BotsomeClient(bot, discord, options, responseService, logger);
+		return new BotsomeClient(bot, discord, options, responseService, logger, random);
 	}
 	
 	public async ValueTask DisposeAsync() {

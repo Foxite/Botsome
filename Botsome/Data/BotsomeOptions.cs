@@ -6,7 +6,7 @@ using DSharpPlus.Entities;
 namespace Botsome;
 
 public class BotsomeOptions {
-	public Dictionary<string, BotActivity> Status { get; set; }
+	public Dictionary<string, BotActivity[]> Status { get; set; }
 	public List<BotsomeItem> Items { get; set; }
 }
 
