@@ -15,6 +15,7 @@ public class BotsomeClient : IAsyncDisposable {
 	private readonly IOptionsMonitor<BotsomeOptions> m_Options;
 	private readonly ResponseService m_ResponseService;
 	private readonly IDisposable m_OnChangeListener;
+	private readonly Random m_Random;
 
 	public Dictionary<string, DiscordEmoji> Emotes { get; }
 	public string Token { get; }
@@ -27,6 +28,7 @@ public class BotsomeClient : IAsyncDisposable {
 		m_Discord = discord;
 		m_Options = options;
 		m_ResponseService = responseService;
+		m_Random = random;
 		Token = bot.Token;
 		Id = bot.Id;
 		Groups = bot.ParsedGroups;
@@ -104,9 +106,10 @@ public class BotsomeClient : IAsyncDisposable {
 
 	public async Task OnMessageAsync(MessageCreateEventArgs ea) {
 		foreach (BotsomeItem item in m_Options.CurrentValue.Items) {
-			if (!ea.Author.IsBot && AllowChannel(item, ea.Channel) && item.Trigger.Type switch {
+			if (!ea.Author.IsBot && AllowChannel(item, ea.Channel) && m_Random.NextDouble() < item.Trigger.Probability && item.Trigger.Type switch {
 			    TriggerType.MessageContent => item.Trigger.ActualMessageRegex!.IsMatch(ea.Message.Content),
 			    TriggerType.EmoteNameAsMessage => EmoteRegex.Matches(ea.Message.Content).Select(match => match.Groups["name"].Value).Any(emoteName => item.Trigger.ActualEmoteNameRegex!.IsMatch(emoteName)),
+				TriggerType.MessageFromUser => item.Trigger.UserId == ea.Author.Id,
 			    _ => false
 		    }) {
 				await m_ResponseService.ReportAsync(new BotsomeEvent(ea.Channel.Id, ea.Message.Id, item), this);
@@ -115,7 +118,8 @@ public class BotsomeClient : IAsyncDisposable {
 	}
 
 	private static bool AllowChannel(BotsomeItem item, DiscordChannel channel) {
-		return item.Trigger.OnlyInChannels is not { Count: > 0 } || item.Trigger.OnlyInChannels.Contains(channel.Id);
+		return (item.Trigger.OnlyInChannels is not { Count: > 0 } || item.Trigger.OnlyInChannels.Contains(channel.Id))
+			&& (!channel.GuildId.HasValue || item.Trigger.OnlyInServers is not { Count: > 0 } || item.Trigger.OnlyInServers.Contains(channel.GuildId.Value));
 	}
 
 	public static async Task<BotsomeClient> CreateAsync(Bot bot, IServiceProvider isp) {
