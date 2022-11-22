@@ -37,11 +37,13 @@ public class ResponseService {
 			m_IncomingReports.TryRemove(reports.Event, out _);
 		}
 
-		string chosenId = reports.Guids[m_Random.Next(0, reports.Guids.Count)];
-		if (m_ClientService.GetClient(chosenId, out BotsomeClient? client)) {
-			await client.RespondAsync(reports.Event);
-		} else {
-			m_Logger.LogWarning("Client closed after being chosen to respond {Guid} {Event.ChannelId} {Event.MessageId}", chosenId, reports.Event.ChannelId, reports.Event.MessageId);
+		if (m_Random.NextDouble() <= reports.Event.Item.Trigger.Probability) {
+			string chosenId = reports.Guids[m_Random.Next(0, reports.Guids.Count)];
+			if (m_ClientService.GetClient(chosenId, out BotsomeClient? client)) {
+				await client.RespondAsync(reports.Event);
+			} else {
+				m_Logger.LogWarning("Client closed after being chosen to respond {Guid} {Event.ChannelId} {Event.MessageId}", chosenId, reports.Event.ChannelId, reports.Event.MessageId);
+			}
 		}
 	}
 

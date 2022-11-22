@@ -15,7 +15,6 @@ public class BotsomeClient : IAsyncDisposable {
 	private readonly IOptionsMonitor<BotsomeOptions> m_Options;
 	private readonly ResponseService m_ResponseService;
 	private readonly IDisposable m_OnChangeListener;
-	private readonly Random m_Random;
 
 	public Dictionary<string, DiscordEmoji> Emotes { get; }
 	public string Token { get; }
@@ -28,7 +27,6 @@ public class BotsomeClient : IAsyncDisposable {
 		m_Discord = discord;
 		m_Options = options;
 		m_ResponseService = responseService;
-		m_Random = random;
 		Token = bot.Token;
 		Id = bot.Id;
 		Groups = bot.ParsedGroups;
@@ -106,7 +104,7 @@ public class BotsomeClient : IAsyncDisposable {
 
 	public async Task OnMessageAsync(MessageCreateEventArgs ea) {
 		foreach (BotsomeItem item in m_Options.CurrentValue.Items) {
-			if (!ea.Author.IsBot && AllowChannel(item, ea.Channel) && m_Random.NextDouble() < item.Trigger.Probability && item.Trigger.Type switch {
+			if (!ea.Author.IsBot && AllowChannel(item, ea.Channel) && item.Trigger.Type switch {
 			    TriggerType.MessageContent => item.Trigger.ActualMessageRegex!.IsMatch(ea.Message.Content),
 			    TriggerType.EmoteNameAsMessage => EmoteRegex.Matches(ea.Message.Content).Select(match => match.Groups["name"].Value).Any(emoteName => item.Trigger.ActualEmoteNameRegex!.IsMatch(emoteName)),
 				TriggerType.MessageFromUser => item.Trigger.UserId == ea.Author.Id,
