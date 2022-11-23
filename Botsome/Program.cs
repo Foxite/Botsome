@@ -9,9 +9,12 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args);
 builder.ConfigureServices((hbc, isc) => {
 	isc.AddSingleton<Random>();
 	isc.AddSingleton<ClientService>();
-	isc.AddSingleton<ResponseService>();
+	isc.AddSingleton<ClientEventService>();
+	isc.AddSingleton<ItemsService, ConfigItemsService>();
 
 	isc.Configure<BotsomeOptions>(hbc.Configuration.GetSection("Botsome"));
+	isc.Configure<StatusOptions>(hbc.Configuration.GetSection("Status"));
+	isc.Configure<List<BotsomeItem>>(hbc.Configuration.GetSection("Items"));
 
 	isc.AddSingleton(isp => {
 		var dockerConfig = new DockerClientConfiguration();

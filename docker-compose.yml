@@ -9,3 +9,4 @@ services:
       DOTNET_USE_POLLING_FILE_WATCHER: true
     volumes:
       - ./Botsome/appsettings.json:/app/appsettings.json
+      - /var/run/docker.sock:/var/run/docker.sock:ro
