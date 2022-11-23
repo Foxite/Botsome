@@ -83,6 +83,12 @@ public sealed class ClientEventService : IDisposable {
 
 	private void Respond(BotsomeClient client, EventIdentifier eventIdentifier, TrackedEvent trackedEvent) {
 		m_Logger.LogTrace("Respond");
+
+		if (m_Random.NextDouble() > trackedEvent.BotsomeItem.Value!.Trigger.Probability) {
+			m_Logger.LogTrace("Probability miss");
+			return;
+		}
+		
 		Task.Run(async () => {
 			try {
 				await client.RespondAsync(eventIdentifier, trackedEvent.BotsomeItem.Value!, trackedEvent.EmoteId);
@@ -149,6 +155,8 @@ public sealed class ClientEventService : IDisposable {
 						m_ClientEventService.Respond(client, m_EventIdentifier, this);
 					}
 				}
+			} else {
+				m_ClientEventService.m_Logger.LogTrace("No match");
 			}
 		}
 
@@ -169,6 +177,7 @@ public sealed class ClientEventService : IDisposable {
 
 			if (BotsomeItem.HasValue && BotsomeItem.Value == null) {
 				StopTimer();
+				m_ClientEventService.m_Logger.LogTrace("No match");
 				return;
 			}
 

@@ -17,7 +17,7 @@ public class BotsomeClient : IAsyncDisposable {
 
 	public Bot Bot { get; }
 
-	private BotsomeClient(Bot bot, DiscordClient discord, ILogger<BotsomeClient> logger, ClientEventService clientEventService, IOptionsMonitor<StatusOptions> statusOptions) {
+	private BotsomeClient(Bot bot, DiscordClient discord, ILogger<BotsomeClient> logger, ClientEventService clientEventService, IOptionsMonitor<StatusOptions> statusOptions, Random random) {
 		m_EmotesByName = new Dictionary<string, DiscordEmoji>();
 		m_EmotesById = new Dictionary<ulong, DiscordEmoji>();
 		m_Discord = discord;
@@ -27,7 +27,8 @@ public class BotsomeClient : IAsyncDisposable {
 			BotActivity? activity = null;
 			
 			foreach (string group in bot.ParsedGroups) {
-				if (newOptions.Groups.TryGetValue(group, out activity)) {
+				if (newOptions.Groups.TryGetValue(group, out BotActivity[]? activities)) {
+					activity = activities[random.Next(0, activities.Length)];
 					break;
 				}
 			}
@@ -80,10 +81,11 @@ public class BotsomeClient : IAsyncDisposable {
 		var clientEventService = isp.GetRequiredService<ClientEventService>();
 		var logger = loggerFactory.CreateLogger<BotsomeClient>();
 		var options = isp.GetRequiredService<IOptionsMonitor<StatusOptions>>();
+		var random = isp.GetRequiredService<Random>();
 
 		await discord.ConnectAsync();
 
-		return new BotsomeClient(bot, discord, logger, clientEventService, options);
+		return new BotsomeClient(bot, discord, logger, clientEventService, options, random);
 	}
 	
 	public async ValueTask DisposeAsync() {

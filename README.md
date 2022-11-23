@@ -1,5 +1,5 @@
 # Botsome
-Botsome monitors your docker containers and will ~~steal~~ use the bot tokens of your Discord bots, and whenever someone sends a message containing the emote you specified, it will pick a random bot token and use it to react with that message with the same emote.
+Botsome monitors your docker containers and will ~~steal~~ use the bot tokens of your Discord bots to make them respond to certain events together. You can configure a trigger for a random bot to respond, or all of them at once.
 
 As an unwanted side effect, if a bot container is running but isn't actually connected to Discord, the bot will still appear online because of Botsome's connection using its token.
 
