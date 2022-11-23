@@ -9,7 +9,7 @@ namespace Botsome;
 /// Provides BotsomeItems.
 /// </summary>
 public abstract class ItemsService {
-	public abstract BotsomeItem? GetItem(MessageCreateEventArgs eventArgs);
+	public abstract BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId);
 }
 
 public class ConfigItemsService : ItemsService {
@@ -21,12 +21,14 @@ public class ConfigItemsService : ItemsService {
 		m_Options = options;
 	}
 	
-	public override BotsomeItem? GetItem(MessageCreateEventArgs eventArgs) {
+	public override BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId) {
 		foreach (BotsomeItem item in m_Options.CurrentValue) {
-			if (AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs)) {
+			if (AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs, out emoteId)) {
 				return item;
 			}
 		}
+
+		emoteId = null;
 
 		return null;
 	}
@@ -35,20 +37,24 @@ public class ConfigItemsService : ItemsService {
 		return item.Trigger.OnlyInChannels is not { Count: > 0 } || item.Trigger.OnlyInChannels.Contains(channel.Id);
 	}
 
-	private static bool ItemIsMatch(BotsomeItem item, MessageCreateEventArgs eventArgs) {
+	private static bool ItemIsMatch(BotsomeItem item, MessageCreateEventArgs eventArgs, out ulong? emoteId) {
 		switch (item.Trigger.Type) {
 			case TriggerType.MessageContent:
+				emoteId = null;
 				return item.Trigger.ActualMessageRegex!.IsMatch(eventArgs.Message.Content);
 			case TriggerType.EmoteNameAsMessage: {
 				foreach (Match match in EmoteRegex.Matches(eventArgs.Message.Content)) {
 					if (item.Trigger.ActualEmoteNameRegex!.IsMatch(match.Groups["name"].Value)) {
+						emoteId = ulong.Parse(match.Groups["id"].Value);
 						return true;
 					}
 				}
 
+				emoteId = null;
 				return false;
 			}
 			default:
+				emoteId = null;
 				return false;
 		}
 	}

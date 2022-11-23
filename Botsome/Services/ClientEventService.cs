@@ -51,7 +51,7 @@ public sealed class ClientEventService : IDisposable {
 			}
 
 			m_RandomResponseTime = TimeSpan.FromSeconds(Math.Min(m_LatestDelayWindows.Max(ts => ts.TotalSeconds) * 1.5, m_Options.Value.RandomResponseTimeSeconds));
-			Console.WriteLine($"{m_RandomResponseTime.TotalMilliseconds}, {(latestReport - earliestReport).TotalMilliseconds}");
+			m_Logger.LogTrace("{RandomResponseTimeMillis}, {WindowMillis}", m_RandomResponseTime.TotalMilliseconds, (latestReport - earliestReport).TotalMilliseconds);
 		};
 	}
 
@@ -60,40 +60,6 @@ public sealed class ClientEventService : IDisposable {
 	}
 
 	private void ProcessReports() {
-		void AddReporterOrRespond(EventIdentifier eventIdentifier, TrackedEvent trackedEvent, ReportedEvent reportedEvent) {
-			trackedEvent.ReportedAt.Add(DateTime.UtcNow);
-			
-			// If a client doesn't have the message content, it gets put into the list, and it responds when another client provides the message content and the item can be found.
-			if (!trackedEvent.BotsomeItem.HasValue && reportedEvent.EventArgs.Message.Content != null) {
-				trackedEvent.BotsomeItem = m_ItemsService.GetItem(reportedEvent.EventArgs);
-			}
-
-			if (trackedEvent.BotsomeItem.HasValue && trackedEvent.BotsomeItem.Value == null) {
-				trackedEvent.StopTimer();
-				return;
-			}
-
-			Debug.Assert(trackedEvent.BotsomeItem == null || trackedEvent.BotsomeItem.HasValue);
-
-			if (trackedEvent.BotsomeItem == null || trackedEvent.BotsomeItem.Value!.RespondMode == BotSelection.Random) {
-				trackedEvent.Reporters.Add(reportedEvent.Client);
-			} else if (trackedEvent.BotsomeItem.Value.RespondMode == BotSelection.All) {
-				trackedEvent.StopTimer();
-
-				void RespondLocal(BotsomeClient client) {
-					if (client.CanRespond(trackedEvent.BotsomeItem.Value) && client.Bot.Groups.Contains(trackedEvent.BotsomeItem.Value.RespondGroup)) {
-						Respond(client, eventIdentifier, trackedEvent);
-					}
-				}
-				
-				RespondLocal(reportedEvent.Client);
-				foreach (BotsomeClient client in trackedEvent.Reporters) {
-					RespondLocal(client);
-				}
-				trackedEvent.Reporters.Clear();
-			}
-		}
-		
 		while (!m_ProcessReportsCancellation.IsCancellationRequested) {
 			ReportedEvent reportedEvent;
 			try {
@@ -105,21 +71,21 @@ public sealed class ClientEventService : IDisposable {
 			m_TrackedEvents.AddOrUpdate(
 				reportedEvent.GetIdentifier(),
 				identifier => {
-					Console.WriteLine("Open");
+					m_Logger.LogTrace("Open");
 					var ret = new TrackedEvent(this, m_RandomResponseTime, identifier);
-					AddReporterOrRespond(identifier, ret, reportedEvent);
+					ret.AddReporter(reportedEvent);
 					return ret;
 				},
-				(identifier, evt) => AddReporterOrRespond(identifier, evt, reportedEvent)
+				(_, evt) => evt.AddReporter(reportedEvent)
 			);
 		}
 	}
 
 	private void Respond(BotsomeClient client, EventIdentifier eventIdentifier, TrackedEvent trackedEvent) {
-		Console.WriteLine("Respond");
+		m_Logger.LogTrace("Respond");
 		Task.Run(async () => {
 			try {
-				await client.RespondAsync(eventIdentifier, trackedEvent.BotsomeItem.Value!);
+				await client.RespondAsync(eventIdentifier, trackedEvent.BotsomeItem.Value!, trackedEvent.EmoteId);
 			} catch (Exception e) {
 				// TODO log client id, event identifier, and item
 				m_Logger.LogError(e, "Caught exception while responding to event");
@@ -144,12 +110,13 @@ public sealed class ClientEventService : IDisposable {
 		private readonly ClientEventService m_ClientEventService;
 		private readonly EventIdentifier m_EventIdentifier;
 		private readonly Timer m_RespondTimer;
-		
+		private readonly List<BotsomeClient> m_Reporters = new();
+
 		// Optional: has a value if ItemsService.GetItem has been called.
 		// Value: the return value of GetItem
-		public Optional<BotsomeItem?> BotsomeItem { get; set; } = Optional<BotsomeItem?>.Default;
-		public List<BotsomeClient> Reporters { get; } = new();
+		public Optional<BotsomeItem?> BotsomeItem { get; private set; } = Optional<BotsomeItem?>.Default;
 		public List<DateTime> ReportedAt { get; } = new();
+		public ulong? EmoteId { get; private set; }
 
 		public TrackedEvent(ClientEventService clientEventService, TimeSpan respondAfter, EventIdentifier eventIdentifier) {
 			m_ClientEventService = clientEventService;
@@ -163,28 +130,51 @@ public sealed class ClientEventService : IDisposable {
 		}
 
 		private void Elapsed(object? sender, ElapsedEventArgs e) {
-			Console.WriteLine($"Close {Reporters.Count}");
+			m_ClientEventService.m_Logger.LogTrace("Close {Count}", m_Reporters.Count);
 			m_RespondTimer.Dispose();
-			// BotSelection.All will be handled upon reception
-			if (BotsomeItem.HasValue && BotsomeItem.Value != null && BotsomeItem.Value.RespondMode == BotSelection.Random) {
-				List<BotsomeClient> eligibleReporters = Reporters.Where(reporter => reporter.CanRespond(BotsomeItem.Value!)).ToList();
+			if (BotsomeItem.HasValue && BotsomeItem.Value != null) {
+				List<BotsomeClient> eligibleResponders = m_Reporters.Where(reporter => reporter.CanRespond(BotsomeItem.Value!)).ToList();
 
-				if (eligibleReporters.Count == 0) {
-					Console.WriteLine("No eligible responders");
+				if (eligibleResponders.Count == 0) {
+					m_ClientEventService.m_Logger.LogTrace("No eligible responders");
 					return;
 				}
-				
-				int index = m_ClientEventService.m_Random.Next(0, eligibleReporters.Count);
-				BotsomeClient selectedClient = eligibleReporters[index];
-				m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this);
+
+				if (BotsomeItem.Value.RespondMode == BotSelection.Random) {
+					int index = m_ClientEventService.m_Random.Next(0, eligibleResponders.Count);
+					BotsomeClient selectedClient = eligibleResponders[index];
+					m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this);
+				} else {
+					foreach (BotsomeClient client in eligibleResponders) {
+						m_ClientEventService.Respond(client, m_EventIdentifier, this);
+					}
+				}
 			}
 		}
 
-		public void StopTimer() {
+		private void StopTimer() {
 			if (m_RespondTimer.Enabled) {
 				m_RespondTimer.Stop();
 				m_RespondTimer.Dispose();
 			}
+		}
+
+		public void AddReporter(ReportedEvent reportedEvent) {
+			ReportedAt.Add(DateTime.UtcNow);
+			
+			if (!BotsomeItem.HasValue && reportedEvent.EventArgs.Message.Content != null) {
+				BotsomeItem = m_ClientEventService.m_ItemsService.GetItem(reportedEvent.EventArgs, out ulong? emoteId);
+				EmoteId ??= emoteId;
+			}
+
+			if (BotsomeItem.HasValue && BotsomeItem.Value == null) {
+				StopTimer();
+				return;
+			}
+
+			Debug.Assert(BotsomeItem == null || BotsomeItem.HasValue);
+
+			m_Reporters.Add(reportedEvent.Client);
 		}
 	}
 }

@@ -57,6 +57,7 @@ public class BotsomeClient : IAsyncDisposable {
 						IReadOnlyList<DiscordGuildEmoji> guildEmotes = await kvp.Value.GetEmojisAsync();
 						foreach (DiscordGuildEmoji emote in guildEmotes) {
 							m_EmotesByName[emote.Name] = emote;
+							m_EmotesById[emote.Id] = emote;
 						}
 					}
 				} catch (Exception ex) {
@@ -91,13 +92,14 @@ public class BotsomeClient : IAsyncDisposable {
 		m_OnChangeListener.Dispose();
 	}
 
-	public async Task RespondAsync(EventIdentifier eventIdentifier, BotsomeItem item) {
+	public async Task RespondAsync(EventIdentifier eventIdentifier, BotsomeItem item, ulong? emoteId) {
 		DiscordChannel channel = await m_Discord.GetChannelAsync(eventIdentifier.ChannelId);
 		foreach (BotsomeResponse response in item.Responses) {
-			DiscordEmoji discordEmoji = null!;
+			DiscordEmoji? discordEmoji = null;
 			if (response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction) {
-				discordEmoji = m_EmotesByName[response.Response];
-				
+				if (!(emoteId.HasValue && m_EmotesById.TryGetValue(emoteId.Value, out discordEmoji))) {
+					discordEmoji = m_EmotesByName[response.Response];
+				}
 			}
 
 			await (response.Type switch {
@@ -115,7 +117,6 @@ public class BotsomeClient : IAsyncDisposable {
 			.Where(response => response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction)
 			.Select(response => response.Response);
 				
-		// TODO check if we have the permissions to respond in the channel/guild
 		return requiredEmotes.All(emote => m_EmotesByName.ContainsKey(emote));
 	}
 }
