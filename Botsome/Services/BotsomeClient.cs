@@ -115,14 +115,14 @@ public class BotsomeClient : IAsyncDisposable {
 	}
 
 	public bool CanRespond(BotsomeItem botsomeItem) {
+		if (!(string.IsNullOrWhiteSpace(botsomeItem.RespondGroup) || botsomeItem.RespondGroup == "all") && !Bot.ParsedGroups.Contains(botsomeItem.RespondGroup)) {
+			return false;
+		}
+		
 		IEnumerable<string> requiredEmotes = botsomeItem.Responses
 			.Where(response => response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction)
 			.Select(response => response.Response);
-
-		if (!string.IsNullOrWhiteSpace(botsomeItem.RespondGroup) && !Bot.Groups.Contains(botsomeItem.RespondGroup)) {
-			return false;
-		}
-				
+		
 		return requiredEmotes.All(emote => m_EmotesByName.ContainsKey(emote));
 	}
 }
