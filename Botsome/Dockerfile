@@ -14,4 +14,4 @@ RUN dotnet publish "Botsome.csproj" -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-CMD ["dotnet", "Botsome.dll"]
+CMD ["./Botsome"]
