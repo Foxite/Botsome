@@ -10,7 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="Docker.DotNet" Version="3.125.12" />
-        <PackageReference Include="DSharpPlus" Version="4.2.0" />
+        <PackageReference Include="DSharpPlus" Version="4.4.0" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     </ItemGroup>
 
