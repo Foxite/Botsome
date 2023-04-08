@@ -71,7 +71,7 @@ public class DockerWatcher : IHostedService {
 		Task.Run(async () => {
 			try {
 				if (message.Type == "container") {
-					if (message.Status == "stop") {
+					if (message.Status == "die") {
 						await m_ClientService.StopBotAsync(message.ID);
 					} else if (message.Status == "start") {
 						await CheckContainerAndStartBot(message.ID);
