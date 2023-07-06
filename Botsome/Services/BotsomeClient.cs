@@ -42,9 +42,14 @@ public class BotsomeClient : IAsyncDisposable {
 		
 		m_OnChangeListener = statusOptions.OnChange(newOptions => UpdateStatus(newOptions));
 
+		discord.GuildBanAdded += (_, ea) => {
+			clientEventService.OnEvent(this, ea);
+			return Task.CompletedTask;
+		};
+
 		discord.MessageCreated += (_, ea) => {
 			if (!ea.Author.IsBot) {
-				clientEventService.OnMessageCreated(this, ea);
+				clientEventService.OnEvent(this, ea);
 			}
 			return Task.CompletedTask;
 		};

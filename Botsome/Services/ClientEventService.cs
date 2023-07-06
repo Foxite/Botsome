@@ -55,7 +55,7 @@ public sealed class ClientEventService : IDisposable {
 		};
 	}
 
-	public void OnMessageCreated(BotsomeClient client, MessageCreateEventArgs eventArgs) {
+	public void OnEvent(BotsomeClient client, DiscordEventArgs eventArgs) {
 		m_Reports.Add(new ReportedEvent(client, eventArgs));
 	}
 
@@ -107,7 +107,7 @@ public sealed class ClientEventService : IDisposable {
 
 	private record ReportedEvent(
 		BotsomeClient Client,
-		MessageCreateEventArgs EventArgs
+		DiscordEventArgs EventArgs
 	) {
 		public EventIdentifier GetIdentifier() => new(EventArgs.Channel.Id, EventArgs.Message.Id);
 	};
