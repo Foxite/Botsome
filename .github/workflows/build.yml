@@ -1,4 +1,4 @@
-name: Build Botsome
+name: Build and push Docker image
 
 on:
   push:
