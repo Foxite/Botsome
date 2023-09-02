@@ -3,11 +3,7 @@ name: Build and push Docker image
 on:
   push:
     branches: [ master ]
-    paths:
-      - 'Botsome/**'
   pull_request:
-    paths:
-      - 'Botsome/**'
 
 jobs:
   build-botsome:
