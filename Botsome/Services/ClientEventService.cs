@@ -81,7 +81,7 @@ public sealed class ClientEventService : IDisposable {
 		}
 	}
 
-	private void Respond(BotsomeClient client, EventIdentifier eventIdentifier, TrackedEvent trackedEvent) {
+	private void Respond(BotsomeClient client, EventIdentifier eventIdentifier, TrackedEvent trackedEvent, IEnumerable<BotsomeResponse> responses) {
 		m_Logger.LogTrace("Respond");
 
 		if (m_Random.NextDouble() > trackedEvent.BotsomeItem.Value!.Trigger.Probability) {
@@ -91,7 +91,7 @@ public sealed class ClientEventService : IDisposable {
 		
 		Task.Run(async () => {
 			try {
-				await client.RespondAsync(eventIdentifier, trackedEvent.BotsomeItem.Value!, trackedEvent.EmoteId);
+				await client.RespondAsync(eventIdentifier, responses, trackedEvent.EmoteId);
 			} catch (Exception e) {
 				// TODO log client id, event identifier, and item
 				m_Logger.LogError(e, "Caught exception while responding to event");
@@ -146,13 +146,19 @@ public sealed class ClientEventService : IDisposable {
 					return;
 				}
 
-				if (BotsomeItem.Value.RespondMode == BotSelection.Random) {
+				if (BotsomeItem.Value.RespondMode == BotSelection.All) {
+					foreach (BotsomeClient client in eligibleResponders) {
+						m_ClientEventService.Respond(client, m_EventIdentifier, this, BotsomeItem.Value!.Responses);
+					}
+				} else if (BotsomeItem.Value.RespondMode == BotSelection.Random) {
 					int index = m_ClientEventService.m_Random.Next(0, eligibleResponders.Count);
 					BotsomeClient selectedClient = eligibleResponders[index];
-					m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this);
-				} else {
-					foreach (BotsomeClient client in eligibleResponders) {
-						m_ClientEventService.Respond(client, m_EventIdentifier, this);
+					m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this, BotsomeItem.Value.Responses);
+				} else if (BotsomeItem.Value.RespondMode == BotSelection.RandomPerResponse) {
+					foreach (BotsomeResponse response in BotsomeItem.Value.Responses) {
+						int index = m_ClientEventService.m_Random.Next(0, eligibleResponders.Count);
+						BotsomeClient selectedClient = eligibleResponders[index];
+						m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this, new[] { response });
 					}
 				}
 			} else {

@@ -94,9 +94,9 @@ public class BotsomeClient : IAsyncDisposable {
 		m_OnChangeListener.Dispose();
 	}
 
-	public async Task RespondAsync(EventIdentifier eventIdentifier, BotsomeItem item, ulong? emoteId) {
+	public async Task RespondAsync(EventIdentifier eventIdentifier, IEnumerable<BotsomeResponse> responses, ulong? emoteId) {
 		DiscordChannel channel = await m_Discord.GetChannelAsync(eventIdentifier.ChannelId);
-		foreach (BotsomeResponse response in item.Responses) {
+		foreach (BotsomeResponse response in responses) {
 			DiscordEmoji? discordEmoji = null;
 			if (response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction) {
 				if (!(emoteId.HasValue && m_EmotesById.TryGetValue(emoteId.Value, out discordEmoji))) {
