@@ -12,4 +12,6 @@ public class BotsomeOptions {
 	public TimeSpan RandomResponseTime => TimeSpan.FromSeconds(RandomResponseTimeSeconds);
 
 	public RandomDelayMode RandomResponseTimeMode { get; set; }
+
+	public ICollection<ulong> IgnoredRoles { get; set; } = null!;
 }

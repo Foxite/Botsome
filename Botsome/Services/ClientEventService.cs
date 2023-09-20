@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
+using System.Reflection;
 using System.Timers;
 using Botsome.Util;
+using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
-using Emzi0767;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Timer = System.Timers.Timer;
@@ -56,6 +58,15 @@ public sealed class ClientEventService : IDisposable {
 	}
 
 	public void OnMessageCreated(BotsomeClient client, MessageCreateEventArgs eventArgs) {
+		PropertyInfo roleIdsProperty = typeof(DiscordMember).GetProperty("RoleIds", BindingFlags.NonPublic | BindingFlags.Instance)!;
+		var roleIds = (IReadOnlyList<ulong>) roleIdsProperty.GetValue(eventArgs.Author)!;
+		//(eventArgs.Author as DiscordMember)?.Roles.Count(); // 0
+		//roleIds.Count(); // 1, no, i dont know why.
+		if (eventArgs.Author is DiscordMember authorMember && m_Options.Value.IgnoredRoles.Intersect(roleIds).Any()) {
+			m_Logger.LogDebug("Not responding; ignored due to roles");
+			return;
+		}
+		
 		m_Reports.Add(new ReportedEvent(client, eventArgs));
 	}
 
@@ -120,7 +131,7 @@ public sealed class ClientEventService : IDisposable {
 
 		// Optional: has a value if ItemsService.GetItem has been called.
 		// Value: the return value of GetItem
-		public Optional<BotsomeItem?> BotsomeItem { get; private set; } = Optional<BotsomeItem?>.Default;
+		public Emzi0767.Optional<BotsomeItem?> BotsomeItem { get; private set; } = Emzi0767.Optional<BotsomeItem?>.Default;
 		public List<DateTime> ReportedAt { get; } = new();
 		public ulong? EmoteId { get; private set; }
 
