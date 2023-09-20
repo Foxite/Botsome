@@ -74,7 +74,7 @@ public class BotsomeClient : IAsyncDisposable {
 		
 		var discord = new DiscordClient(new DiscordConfiguration() {
 			Token = bot.Token,
-			Intents = DiscordIntents.GuildMessages | DiscordIntents.GuildMembers,
+			Intents = DiscordIntents.GuildMessages,
 			LoggerFactory = loggerFactory
 		});
 
