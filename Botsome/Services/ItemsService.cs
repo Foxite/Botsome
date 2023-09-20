@@ -23,7 +23,7 @@ public class ConfigItemsService : ItemsService {
 	
 	public override BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId) {
 		foreach (BotsomeItem item in m_Options.CurrentValue) {
-			if (AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs, out emoteId)) {
+			if (item.Enabled && AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs, out emoteId)) {
 				return item;
 			}
 		}
