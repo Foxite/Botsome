@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Botsome; 
@@ -12,13 +13,25 @@ public abstract class ItemsService {
 	public abstract BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId);
 }
 
-public class ConfigItemsService : ItemsService {
+public class ConfigItemsService : ItemsService, IDisposable {
 	private static readonly Regex EmoteRegex = new Regex(@"<(?<animated>a?):(?<name>\w+):(?<id>\d+)>");
 
+	private readonly ILogger<ConfigItemsService> m_Logger;
 	private readonly IOptionsMonitor<List<BotsomeItem>> m_Options;
+	private readonly IDisposable m_OptionsChangeMonitor;
 
-	public ConfigItemsService(IOptionsMonitor<List<BotsomeItem>> options) {
+	public ConfigItemsService(IOptionsMonitor<List<BotsomeItem>> options, ILogger<ConfigItemsService> logger) {
 		m_Options = options;
+		m_Logger = logger;
+
+		m_OptionsChangeMonitor = options.OnChange(items => {
+			for (int i = 0; i < items.Count; i++) {
+				BotsomeItem? item = items[i];
+				if (item.ResponseSelection == ResponseSelection.Random && item.RespondMode == BotSelection.RandomPerResponse) {
+					m_Logger.LogError("Botsome item with index {Index} has ResponseSelection: Random and RespondMode: RandomPerResponse. This is not supported, ResponseSelection will work as All in this case", i);
+				}
+			}
+		});
 	}
 	
 	public override BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId) {
@@ -67,5 +80,9 @@ public class ConfigItemsService : ItemsService {
 				emoteId = null;
 				return false;
 		}
+	}
+	
+	public void Dispose() {
+		m_OptionsChangeMonitor.Dispose();
 	}
 }

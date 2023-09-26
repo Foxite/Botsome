@@ -150,7 +150,22 @@ public sealed class ClientEventService : IDisposable {
 			m_ClientEventService.m_Logger.LogTrace("Close {Count}", m_Reporters.Count);
 			m_RespondTimer.Dispose();
 			if (BotsomeItem.HasValue && BotsomeItem.Value != null) {
-				List<BotsomeClient> eligibleResponders = m_Reporters.Where(reporter => reporter.CanRespond(BotsomeItem.Value!)).ToList();
+				List<BotsomeResponse> responses;
+				if (BotsomeItem.Value.ResponseSelection == ResponseSelection.All) {
+					responses = BotsomeItem.Value.Responses;
+				} else if (BotsomeItem.Value.ResponseSelection == ResponseSelection.Random) {
+					responses = new List<BotsomeResponse>() {
+						BotsomeItem.Value.Responses[m_ClientEventService.m_Random.Next(0, BotsomeItem.Value.Responses.Count)]
+					};
+				} else {
+					m_ClientEventService.m_Logger.LogCritical("Encountered invalid ResponseSelection {ResponseSelection}", BotsomeItem.Value.ResponseSelection);
+					throw new Exception("What the fuck");
+				}
+				
+				List<(BotsomeClient Client, ICollection<BotsomeResponse> Responses)> eligibleResponders = m_Reporters
+					.Select(reporter => (Client: reporter, Responses: reporter.CanRespond(BotsomeItem.Value, responses)))
+					.Where(tuple => tuple.Responses.Count > 0)
+					.ToList();
 
 				if (eligibleResponders.Count == 0) {
 					m_ClientEventService.m_Logger.LogTrace("No eligible responders");
@@ -158,17 +173,18 @@ public sealed class ClientEventService : IDisposable {
 				}
 
 				if (BotsomeItem.Value.RespondMode == BotSelection.All) {
-					foreach (BotsomeClient client in eligibleResponders) {
-						m_ClientEventService.Respond(client, m_EventIdentifier, this, BotsomeItem.Value!.Responses);
+					foreach ((BotsomeClient selectedClient, ICollection<BotsomeResponse> selectedResponses) in eligibleResponders) {
+						m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this, selectedResponses);
 					}
 				} else if (BotsomeItem.Value.RespondMode == BotSelection.Random) {
 					int index = m_ClientEventService.m_Random.Next(0, eligibleResponders.Count);
-					BotsomeClient selectedClient = eligibleResponders[index];
-					m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this, BotsomeItem.Value.Responses);
+					(BotsomeClient selectedClient, ICollection<BotsomeResponse> selectedResponses) = eligibleResponders[index];
+					m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this, selectedResponses);
 				} else if (BotsomeItem.Value.RespondMode == BotSelection.RandomPerResponse) {
+					// Note: if ResponseSelection is Random, it will be ignored; a warning will have been emitted by ConfigItemsService
 					foreach (BotsomeResponse response in BotsomeItem.Value.Responses) {
 						int index = m_ClientEventService.m_Random.Next(0, eligibleResponders.Count);
-						BotsomeClient selectedClient = eligibleResponders[index];
+						(BotsomeClient selectedClient, ICollection<BotsomeResponse> selectedResponses) = eligibleResponders[index];
 						m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this, new[] { response });
 					}
 				}

@@ -114,15 +114,35 @@ public class BotsomeClient : IAsyncDisposable {
 		}
 	}
 
-	public bool CanRespond(BotsomeItem botsomeItem) {
+	public ICollection<BotsomeResponse> CanRespond(BotsomeItem botsomeItem, ICollection<BotsomeResponse> responses) {
 		if (!(string.IsNullOrWhiteSpace(botsomeItem.RespondGroup) || botsomeItem.RespondGroup == "all") && !Bot.ParsedGroups.Contains(botsomeItem.RespondGroup)) {
-			return false;
+			return Array.Empty<BotsomeResponse>();
 		}
-		
-		IEnumerable<string> requiredEmotes = botsomeItem.Responses
-			.Where(response => response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction)
-			.Select(response => response.Response);
-		
-		return requiredEmotes.All(emote => m_EmotesByName.ContainsKey(emote));
+
+		return responses
+			.Where(response => {
+				if (response.Type is ResponseType.EmoteNameAsMessage or ResponseType.EmoteNameAsReaction) {
+					if (!m_EmotesByName.ContainsKey(response.Response)) {
+						return false;
+					}
+
+					// TODO check if the bot has AddReactions permission
+					bool hasPermission = true;
+					if (!hasPermission) {
+						return false;
+					}
+				}
+
+				if (response.Type is ResponseType.Message or ResponseType.EmoteNameAsMessage) {
+					// TODO check if the bot has SendMessages permission
+					bool hasPermission = true;
+					if (!hasPermission) {
+						return false;
+					}
+				}
+
+				return true;
+			})
+			.ToList();
 	}
 }
