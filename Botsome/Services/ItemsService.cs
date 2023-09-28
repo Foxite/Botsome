@@ -47,8 +47,8 @@ public class ConfigItemsService : ItemsService, IDisposable {
 	}
 	
 	private static bool AllowChannel(BotsomeItem item, DiscordChannel channel) {
-		return (item.Trigger.OnlyInChannels is not { Count: > 0 } || item.Trigger.OnlyInChannels.Contains(channel.Id))
-			&& (!channel.GuildId.HasValue || item.Trigger.OnlyInServers is not { Count: > 0 } || item.Trigger.OnlyInServers.Contains(channel.GuildId.Value));
+		return (item.Trigger.OnlyInChannels == null || item.Trigger.OnlyInChannels.Count == 0 || item.Trigger.OnlyInChannels.Contains(channel.Id))
+			&& (!channel.GuildId.HasValue || item.Trigger.OnlyInServers == null || item.Trigger.OnlyInServers.Count == 0 || item.Trigger.OnlyInServers.Contains(channel.GuildId.Value));
 	}
 
 	private static bool ItemIsMatch(BotsomeItem item, MessageCreateEventArgs eventArgs, out ulong? emoteId) {
