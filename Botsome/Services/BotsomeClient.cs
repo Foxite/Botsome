@@ -108,7 +108,7 @@ public class BotsomeClient : IAsyncDisposable {
 				ResponseType.EmojiAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(DiscordEmoji.FromUnicode(response.Response)),
 				ResponseType.EmoteNameAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(discordEmoji),
 				ResponseType.EmoteNameAsMessage => channel.SendMessageAsync(discordEmoji),
-				ResponseType.Message => channel.SendMessageAsync(response.Response),
+				ResponseType.Message => channel.SendMessageAsync(dmb => dmb.WithContent(response.Response).WithReply(eventIdentifier.MessageId, false, false)),
 				//_ => throw new ArgumentOutOfRangeException()
 			});
 		}
