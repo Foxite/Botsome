@@ -117,7 +117,7 @@ public class BotsomeClient : IAsyncDisposable {
 				ResponseType.EmoteNameAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(discordEmoji),
 				ResponseType.EmoteNameAsMessage => channel.SendMessageAsync(discordEmoji),
 				ResponseType.Message => channel.SendMessageAsync(dmb => dmb.WithContent(response.Response).WithReply(eventIdentifier.MessageId, false, false)),
-				ResponseType.Notification => Task.Run(() => m_NotificationService.SendNotification($"A botsome item was triggered by {eventIdentifier.ChannelId}/{eventIdentifier.MessageId}")),
+				ResponseType.Notification => Task.Run(() => m_NotificationService.SendNotification($"A botsome item was triggered by {eventIdentifier.ChannelId}/{eventIdentifier.MessageId} {response.Response}")),
 				//_ => throw new ArgumentOutOfRangeException()
 			});
 		}
