@@ -11,10 +11,12 @@ builder.ConfigureServices((hbc, isc) => {
 	isc.AddSingleton<ClientService>();
 	isc.AddSingleton<ClientEventService>();
 	isc.AddSingleton<ItemsService, ConfigItemsService>();
+	isc.AddSingleton<NotificationService>();
 
 	isc.Configure<BotsomeOptions>(hbc.Configuration.GetSection("Botsome"));
 	isc.Configure<StatusOptions>(hbc.Configuration.GetSection("Status"));
 	isc.Configure<List<BotsomeItem>>(hbc.Configuration.GetSection("Items"));
+	isc.Configure<NotificationService.Config>(hbc.Configuration.GetSection("Notifications"));
 
 	isc.AddSingleton(isp => {
 		var dockerConfig = new DockerClientConfiguration();

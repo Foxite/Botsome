@@ -17,7 +17,7 @@ public class BotsomeClient : IAsyncDisposable {
 
 	public Bot Bot { get; }
 
-	private BotsomeClient(Bot bot, DiscordClient discord, ILogger<BotsomeClient> logger, ClientEventService clientEventService, IOptionsMonitor<StatusOptions> statusOptions, Random random) {
+	private BotsomeClient(Bot bot, DiscordClient discord, ILogger<BotsomeClient> logger, ClientEventService clientEventService, IOptionsMonitor<StatusOptions> statusOptions, Random random, NotificationService notificationService) {
 		m_EmotesByName = new Dictionary<string, DiscordEmoji>();
 		m_EmotesById = new Dictionary<ulong, DiscordEmoji>();
 		m_Discord = discord;
@@ -43,9 +43,14 @@ public class BotsomeClient : IAsyncDisposable {
 		m_OnChangeListener = statusOptions.OnChange(newOptions => UpdateStatus(newOptions));
 
 		discord.MessageCreated += (_, ea) => {
+			if (ea.Guild != null && !ea.Channel.GuildId.HasValue) {
+				notificationService.SendNotification($"Channel object missing guildId when receiving message: {ea.Guild?.Id}/{ea.Channel?.Id}/{ea.Message?.Id} by {ea.Author?.Id} {ea.Message?.JumpLink}");
+			}
+			
 			if (!ea.Author.IsBot) {
 				clientEventService.OnMessageCreated(this, ea);
 			}
+			
 			return Task.CompletedTask;
 		};
 
@@ -82,10 +87,11 @@ public class BotsomeClient : IAsyncDisposable {
 		var logger = loggerFactory.CreateLogger<BotsomeClient>();
 		var options = isp.GetRequiredService<IOptionsMonitor<StatusOptions>>();
 		var random = isp.GetRequiredService<Random>();
+		var notificationService = isp.GetRequiredService<NotificationService>();
 
 		await discord.ConnectAsync();
 
-		return new BotsomeClient(bot, discord, logger, clientEventService, options, random);
+		return new BotsomeClient(bot, discord, logger, clientEventService, options, random, notificationService);
 	}
 	
 	public async ValueTask DisposeAsync() {
