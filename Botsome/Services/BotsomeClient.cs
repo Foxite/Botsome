@@ -43,7 +43,7 @@ public class BotsomeClient : IAsyncDisposable {
 		m_OnChangeListener = statusOptions.OnChange(newOptions => UpdateStatus(newOptions));
 
 		discord.MessageCreated += (_, ea) => {
-			if (ea.Guild != null && !ea.Channel.GuildId.HasValue) {
+			if (!ea.Channel.GuildId.HasValue && (ea.Guild != null || ea.Channel.Guild != null || ea.Channel.Type is not (ChannelType.Group or ChannelType.Private))) {
 				notificationService.SendNotification($"Channel object missing guildId when receiving message: {ea.Guild?.Id}/{ea.Channel?.Id}/{ea.Message?.Id} by {ea.Author?.Id} {ea.Message?.JumpLink}");
 			}
 			
