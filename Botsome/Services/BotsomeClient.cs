@@ -48,6 +48,7 @@ public class BotsomeClient : IAsyncDisposable {
 			// Note: this is a temporary diagnostic for issue #17
 			if (!ea.Channel.GuildId.HasValue && (ea.Guild != null || ea.Channel.Guild != null || ea.Channel.Type is not (ChannelType.Group or ChannelType.Private))) {
 				notificationService.SendNotification($"Channel object missing guildId when receiving message: {ea.Guild?.Id}/{ea.Channel?.Id}/{ea.Message?.Id} by {ea.Author?.Id} {ea.Message?.JumpLink}");
+				return Task.CompletedTask;
 			}
 			
 			if (!ea.Author.IsBot) {
