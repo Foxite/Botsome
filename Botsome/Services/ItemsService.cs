@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using Microsoft.Extensions.Logging;
@@ -19,10 +20,12 @@ public class ConfigItemsService : ItemsService, IDisposable {
 	private readonly ILogger<ConfigItemsService> m_Logger;
 	private readonly IOptionsMonitor<List<BotsomeItem>> m_Options;
 	private readonly IDisposable m_OptionsChangeMonitor;
+	private readonly NotificationService m_NotificationService;
 
-	public ConfigItemsService(IOptionsMonitor<List<BotsomeItem>> options, ILogger<ConfigItemsService> logger) {
+	public ConfigItemsService(IOptionsMonitor<List<BotsomeItem>> options, ILogger<ConfigItemsService> logger, NotificationService notificationService) {
 		m_Options = options;
 		m_Logger = logger;
+		m_NotificationService = notificationService;
 
 		m_OptionsChangeMonitor = options.OnChange(items => {
 			for (int i = 0; i < items.Count; i++) {
@@ -46,9 +49,32 @@ public class ConfigItemsService : ItemsService, IDisposable {
 		return null;
 	}
 	
-	private static bool AllowChannel(BotsomeItem item, DiscordChannel channel) {
-		return (item.Trigger.OnlyInChannels == null || item.Trigger.OnlyInChannels.Count == 0 || item.Trigger.OnlyInChannels.Contains(channel.Id))
-			&& (!channel.GuildId.HasValue || item.Trigger.OnlyInServers == null || item.Trigger.OnlyInServers.Count == 0 || item.Trigger.OnlyInServers.Contains(channel.GuildId.Value));
+	private bool AllowChannel(BotsomeItem item, DiscordChannel channel) {
+		// Channel allowlist is not empty, but the channel's ID is not in it
+		if (item.Trigger.OnlyInChannels != null && item.Trigger.OnlyInChannels.Count > 0) {
+			if (!item.Trigger.OnlyInChannels.Contains(channel.Id)) {
+				return false;
+			}
+		}
+
+		// Guild allowlist is not empty, but the channel is not a guild channel, or the guild's ID is not allowed.
+		if (item.Trigger.OnlyInServers != null && item.Trigger.OnlyInServers.Count > 0) {
+			if (channel.Type is ChannelType.Private or ChannelType.Group) {
+				return false;
+			}
+
+			if (!channel.GuildId.HasValue) {
+				m_NotificationService.SendNotification($"Channel.GuildId is missing for non-DM channel: {channel.Guild?.Id}/{channel.Id} // {channel.Guild?.Name} / {channel.Name}");
+
+				return false;
+			}
+
+			if (!item.Trigger.OnlyInServers.Contains(channel.GuildId.Value)) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private static bool ItemIsMatch(BotsomeItem item, MessageCreateEventArgs eventArgs, out ulong? emoteId) {
