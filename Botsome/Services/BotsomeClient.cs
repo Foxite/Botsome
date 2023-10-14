@@ -11,6 +11,7 @@ namespace Botsome;
 /// </summary>
 public class BotsomeClient : IAsyncDisposable {
 	private readonly DiscordClient m_Discord;
+	private readonly NotificationService m_NotificationService;
 	private readonly IDisposable m_OnChangeListener;
 	private readonly Dictionary<string, DiscordEmoji> m_EmotesByName;
 	private readonly Dictionary<ulong, DiscordEmoji> m_EmotesById;
@@ -21,6 +22,7 @@ public class BotsomeClient : IAsyncDisposable {
 		m_EmotesByName = new Dictionary<string, DiscordEmoji>();
 		m_EmotesById = new Dictionary<ulong, DiscordEmoji>();
 		m_Discord = discord;
+		m_NotificationService = notificationService;
 		Bot = bot;
 
 		async Task UpdateStatus(StatusOptions newOptions) {
@@ -115,6 +117,7 @@ public class BotsomeClient : IAsyncDisposable {
 				ResponseType.EmoteNameAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(discordEmoji),
 				ResponseType.EmoteNameAsMessage => channel.SendMessageAsync(discordEmoji),
 				ResponseType.Message => channel.SendMessageAsync(dmb => dmb.WithContent(response.Response).WithReply(eventIdentifier.MessageId, false, false)),
+				ResponseType.Notification => Task.Run(() => m_NotificationService.SendNotification($"A botsome item was triggered by {eventIdentifier.ChannelId}/{eventIdentifier.MessageId}")),
 				//_ => throw new ArgumentOutOfRangeException()
 			});
 		}
