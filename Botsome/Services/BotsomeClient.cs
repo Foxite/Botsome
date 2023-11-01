@@ -35,8 +35,8 @@ public class BotsomeClient : IAsyncDisposable {
 				}
 			}
 
-			if (activity != null) {
-				await m_Discord.UpdateStatusAsync(new DiscordActivity(activity.Message, activity.Type));
+			if (activity != null && activity.Type.HasValue) {
+				await m_Discord.UpdateStatusAsync(new DiscordActivity(activity.Message, activity.Type.Value));
 			} else {
 				await m_Discord.UpdateStatusAsync();
 			}
