@@ -131,7 +131,7 @@ public sealed class ClientEventService : IDisposable {
 
 		// Optional: has a value if ItemsService.GetItem has been called.
 		// Value: the return value of GetItem
-		public Emzi0767.Optional<BotsomeItem?> BotsomeItem { get; private set; } = Emzi0767.Optional<BotsomeItem?>.Default;
+		public Optional<BotsomeItem?> BotsomeItem { get; private set; } = default;
 		public List<DateTime> ReportedAt { get; } = new();
 		public ulong? EmoteId { get; private set; }
 
