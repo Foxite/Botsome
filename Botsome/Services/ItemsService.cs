@@ -4,6 +4,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 
 namespace Botsome; 
 
@@ -26,8 +27,13 @@ public class ConfigItemsService : ItemsService, IDisposable {
 		m_Options = options;
 		m_Logger = logger;
 		m_NotificationService = notificationService;
+		
+		m_Logger.LogDebug("There are {Count} items", options.CurrentValue.Count);
+		m_Logger.LogTrace("Items: {Config}", JsonConvert.SerializeObject(options.CurrentValue));
 
 		m_OptionsChangeMonitor = options.OnChange(items => {
+			m_Logger.LogDebug("There are now {Count} items", options.CurrentValue.Count);
+			m_Logger.LogTrace("Items: {Config}", JsonConvert.SerializeObject(options.CurrentValue));
 			for (int i = 0; i < items.Count; i++) {
 				BotsomeItem? item = items[i];
 				if (item.ResponseSelection == ResponseSelection.Random && item.RespondMode == BotSelection.RandomPerResponse) {
