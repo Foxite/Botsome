@@ -6,4 +6,5 @@ public enum ResponseType {
 	EmoteNameAsMessage,
 	Message,
 	Notification,
+	Sticker,
 }

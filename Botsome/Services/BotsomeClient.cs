@@ -114,12 +114,30 @@ public class BotsomeClient : IAsyncDisposable {
 				}
 			}
 
-			await (response.Type switch {
-				ResponseType.EmojiAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(DiscordEmoji.FromUnicode(response.Response)),
-				ResponseType.EmoteNameAsReaction => (await channel.GetMessageAsync(eventIdentifier.MessageId)).CreateReactionAsync(discordEmoji),
-				ResponseType.EmoteNameAsMessage => channel.SendMessageAsync(discordEmoji),
-				ResponseType.Message => channel.SendMessageAsync(dmb => dmb.WithContent(response.Response).WithReply(eventIdentifier.MessageId, false, false)),
-				ResponseType.Notification => Task.Run(() => m_NotificationService.SendNotification($"A botsome item was triggered by {eventIdentifier.ChannelId}/{eventIdentifier.MessageId} {response.Response}")),
+			DiscordMessage message;
+			switch (response.Type) {
+				case ResponseType.EmojiAsReaction:
+					message = await channel.GetMessageAsync(eventIdentifier.MessageId);
+					await message.CreateReactionAsync(DiscordEmoji.FromUnicode(response.Response));
+					break;
+				case ResponseType.EmoteNameAsReaction:
+					message = await channel.GetMessageAsync(eventIdentifier.MessageId);
+					await message.CreateReactionAsync(discordEmoji);
+					break;
+				case ResponseType.EmoteNameAsMessage:
+					await channel.SendMessageAsync(discordEmoji);
+					break;
+				case ResponseType.Message:
+					await channel.SendMessageAsync(dmb => dmb.WithContent(response.Response).WithReply(eventIdentifier.MessageId, false, false));
+					break;
+				case ResponseType.Notification:
+					await Task.Run(() => m_NotificationService.SendNotification($"A botsome item was triggered by {eventIdentifier.ChannelId}/{eventIdentifier.MessageId} {response.Response}"));
+					break;
+				case ResponseType.Sticker:
+					var sticker = await m_Discord.GetStickerAsync(ulong.Parse(response.Response));
+					await channel.SendMessageAsync(dmb => dmb.WithSticker(sticker));
+			break;
+				//ResponseType.Sticker => channel.SendMessageAsync(dmb => dmb.WithSticker(await m_Discord.GetStickerAsync(ulong.Parse(response.Response))))
 				//_ => throw new ArgumentOutOfRangeException()
 			});
 		}
