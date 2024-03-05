@@ -135,7 +135,7 @@ public class BotsomeClient : IAsyncDisposable {
 					break;
 				case ResponseType.Sticker:
 					var sticker = await m_Discord.GetStickerAsync(ulong.Parse(response.Response));
-					await channel.SendMessageAsync(dmb => dmb.WithSticker(sticker));
+					await channel.SendMessageAsync(dmb => dmb.WithSticker(sticker).WithReply(eventIdentifier.MessageId, false, false));
 					break;
 				//ResponseType.Sticker => channel.SendMessageAsync(dmb => dmb.WithSticker(await m_Discord.GetStickerAsync(ulong.Parse(response.Response))))
 				//_ => throw new ArgumentOutOfRangeException()
