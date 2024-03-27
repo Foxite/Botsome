@@ -57,29 +57,45 @@ public class ConfigItemsService : ItemsService, IDisposable {
 	
 	private bool AllowChannel(BotsomeItem item, DiscordChannel channel) {
 		// Channel allowlist is not empty, but the channel's ID is not in it
-		if (item.Trigger.OnlyInChannels != null && item.Trigger.OnlyInChannels.Count > 0) {
-			if (!item.Trigger.OnlyInChannels.Contains(channel.Id)) {
+		if (item.Trigger.ChannelAllowlist != null && item.Trigger.ChannelAllowlist.Count > 0) {
+			if (!item.Trigger.ChannelAllowlist.Contains(channel.Id)) {
+				return false;
+			}
+		} else if (item.Trigger.ChannelBlocklist != null && item.Trigger.ChannelBlocklist.Count > 0) {
+			if (item.Trigger.ChannelBlocklist.Contains(channel.Id)) {
 				return false;
 			}
 		}
 
 		// Guild allowlist is not empty, but the channel is not a guild channel, or the guild's ID is not allowed.
-		if (item.Trigger.OnlyInServers != null && item.Trigger.OnlyInServers.Count > 0) {
+		if (item.Trigger.ServerAllowlist != null && item.Trigger.ServerAllowlist.Count > 0) {
 			if (channel.Type is ChannelType.Private or ChannelType.Group) {
 				return false;
 			}
 
 			if (!channel.GuildId.HasValue) {
 				m_NotificationService.SendNotification($"Channel.GuildId is missing for non-DM channel: {channel.Guild?.Id}/{channel.Id} // {channel.Guild?.Name} / {channel.Name}");
-
 				return false;
 			}
 
-			if (!item.Trigger.OnlyInServers.Contains(channel.GuildId.Value)) {
+			if (!item.Trigger.ServerAllowlist.Contains(channel.GuildId.Value)) {
+				return false;
+			}
+		} else if (item.Trigger.ServerBlocklist != null && item.Trigger.ServerBlocklist.Count > 0) {
+			if (channel.Type is ChannelType.Private or ChannelType.Group) {
+				return true;
+			}
+			
+			if (!channel.GuildId.HasValue) {
+				m_NotificationService.SendNotification($"Channel.GuildId is missing for non-DM channel: {channel.Guild?.Id}/{channel.Id} // {channel.Guild?.Name} / {channel.Name}");
+				return false;
+			}
+
+			if (item.Trigger.ServerBlocklist.Contains(channel.GuildId.Value)) {
 				return false;
 			}
 		}
-
+		
 		return true;
 	}
 

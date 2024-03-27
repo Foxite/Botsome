@@ -5,8 +5,14 @@ namespace Botsome;
 public class BotsomeTrigger {
 	public TriggerType Type { get; set; }
 	public float Probability { get; set; } = 1.0f;
-	public List<ulong>? OnlyInChannels { get; set; }
-	public List<ulong>? OnlyInServers { get; set; }
+	
+	// If an allowlist is specified, the blocklist will be ignored.
+	public List<ulong>? ChannelAllowlist { get; set; }
+	public List<ulong>? ChannelBlocklist { get; set; }
+	
+	public List<ulong>? ServerAllowlist { get; set; }
+	public List<ulong>? ServerBlocklist { get; set; }
+	
 	public string? MessageRegex { get; set; }
 	public string? EmoteNameRegex { get; set; }
 	public bool CaseSensitiveRegex { get; set; } = false;
