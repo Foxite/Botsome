@@ -14,4 +14,6 @@ public class BotsomeOptions {
 	public RandomDelayMode RandomResponseTimeMode { get; set; }
 
 	public ICollection<ulong> IgnoredRoles { get; set; } = null!;
+	public ICollection<ulong> IgnoredGuilds { get; set; } = null!;
+	public ICollection<ulong> IgnoredChannels { get; set; } = null!;
 }

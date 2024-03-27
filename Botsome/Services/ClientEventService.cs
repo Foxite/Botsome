@@ -66,6 +66,16 @@ public sealed class ClientEventService : IDisposable {
 			m_Logger.LogDebug("Not responding; ignored due to roles");
 			return;
 		}
+
+		if (m_Options.Value.IgnoredChannels.Contains(eventArgs.Channel.Id)) {
+			m_Logger.LogDebug("Not responding; ignored due to global channel blocklist");
+			return;
+		}
+
+		if (eventArgs.Guild != null && m_Options.Value.IgnoredGuilds.Contains(eventArgs.Guild.Id)) {
+			m_Logger.LogDebug("Not responding; ignored due to global guild blocklist");
+			return;
+		}
 		
 		m_Reports.Add(new ReportedEvent(client, eventArgs));
 	}

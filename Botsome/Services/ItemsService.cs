@@ -68,7 +68,7 @@ public class ConfigItemsService : ItemsService, IDisposable {
 		}
 
 		// Guild allowlist is not empty, but the channel is not a guild channel, or the guild's ID is not allowed.
-		if (item.Trigger.ServerAllowlist != null && item.Trigger.ServerAllowlist.Count > 0) {
+		if (item.Trigger.GuildAllowlist != null && item.Trigger.GuildAllowlist.Count > 0) {
 			if (channel.Type is ChannelType.Private or ChannelType.Group) {
 				return false;
 			}
@@ -78,10 +78,10 @@ public class ConfigItemsService : ItemsService, IDisposable {
 				return false;
 			}
 
-			if (!item.Trigger.ServerAllowlist.Contains(channel.GuildId.Value)) {
+			if (!item.Trigger.GuildAllowlist.Contains(channel.GuildId.Value)) {
 				return false;
 			}
-		} else if (item.Trigger.ServerBlocklist != null && item.Trigger.ServerBlocklist.Count > 0) {
+		} else if (item.Trigger.GuildBlocklist != null && item.Trigger.GuildBlocklist.Count > 0) {
 			if (channel.Type is ChannelType.Private or ChannelType.Group) {
 				return true;
 			}
@@ -91,7 +91,7 @@ public class ConfigItemsService : ItemsService, IDisposable {
 				return false;
 			}
 
-			if (item.Trigger.ServerBlocklist.Contains(channel.GuildId.Value)) {
+			if (item.Trigger.GuildBlocklist.Contains(channel.GuildId.Value)) {
 				return false;
 			}
 		}

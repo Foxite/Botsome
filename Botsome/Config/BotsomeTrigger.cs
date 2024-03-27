@@ -10,8 +10,8 @@ public class BotsomeTrigger {
 	public List<ulong>? ChannelAllowlist { get; set; }
 	public List<ulong>? ChannelBlocklist { get; set; }
 	
-	public List<ulong>? ServerAllowlist { get; set; }
-	public List<ulong>? ServerBlocklist { get; set; }
+	public List<ulong>? GuildAllowlist { get; set; }
+	public List<ulong>? GuildBlocklist { get; set; }
 	
 	public string? MessageRegex { get; set; }
 	public string? EmoteNameRegex { get; set; }
