@@ -62,17 +62,17 @@ public sealed class ClientEventService : IDisposable {
 		var roleIds = (IReadOnlyList<ulong>) roleIdsProperty.GetValue(eventArgs.Author)!;
 		//(eventArgs.Author as DiscordMember)?.Roles.Count(); // 0
 		//roleIds.Count(); // 1, no, i dont know why.
-		if (eventArgs.Author is DiscordMember authorMember && m_Options.Value.IgnoredRoles.Intersect(roleIds).Any()) {
+		if (eventArgs.Author is DiscordMember authorMember && m_Options.Value.IgnoredRoles != null && m_Options.Value.IgnoredRoles.Intersect(roleIds).Any()) {
 			m_Logger.LogDebug("Not responding; ignored due to roles");
 			return;
 		}
 
-		if (m_Options.Value.IgnoredChannels.Contains(eventArgs.Channel.Id)) {
+		if (m_Options.Value.IgnoredChannels != null && m_Options.Value.IgnoredChannels.Contains(eventArgs.Channel.Id)) {
 			m_Logger.LogDebug("Not responding; ignored due to global channel blocklist");
 			return;
 		}
 
-		if (eventArgs.Guild != null && m_Options.Value.IgnoredGuilds.Contains(eventArgs.Guild.Id)) {
+		if (eventArgs.Guild != null && m_Options.Value.IgnoredGuilds != null && m_Options.Value.IgnoredGuilds.Contains(eventArgs.Guild.Id)) {
 			m_Logger.LogDebug("Not responding; ignored due to global guild blocklist");
 			return;
 		}
