@@ -103,7 +103,7 @@ public class ConfigItemsService : ItemsService, IDisposable {
 		switch (item.Trigger.Type) {
 			case TriggerType.MessageContent:
 				emoteId = null;
-				return item.Trigger.ActualMessageRegex!.IsMatch(eventArgs.Message.Content);
+				return (!item.Trigger.UserId.HasValue || item.Trigger.UserId.Value == eventArgs.Author.Id) && item.Trigger.ActualMessageRegex!.IsMatch(eventArgs.Message.Content);
 			case TriggerType.EmoteNameAsMessage: {
 				foreach (Match match in EmoteRegex.Matches(eventArgs.Message.Content)) {
 					string emoteName = match.Groups["name"].Value;
@@ -121,9 +121,6 @@ public class ConfigItemsService : ItemsService, IDisposable {
 				emoteId = null;
 				return false;
 			}
-			case TriggerType.MessageFromUser:
-				emoteId = null;
-				return eventArgs.Author.Id == item.Trigger.UserId;
 			default:
 				emoteId = null;
 				return false;
