@@ -5,7 +5,7 @@ namespace Botsome;
 public class BotsomeTrigger {
 	public TriggerType Type { get; set; }
 	public float Probability { get; set; } = 1.0f;
-	
+		
 	// If an allowlist is specified, the blocklist will be ignored.
 	public List<ulong>? ChannelAllowlist { get; set; }
 	public List<ulong>? ChannelBlocklist { get; set; }

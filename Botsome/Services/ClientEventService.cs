@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Timers;
 using Botsome.Util;
 using DSharpPlus.Entities;
@@ -112,7 +113,7 @@ public sealed class ClientEventService : IDisposable {
 		
 		Task.Run(async () => {
 			try {
-				await client.RespondAsync(eventIdentifier, responses, trackedEvent.EmoteId);
+				await client.RespondAsync(eventIdentifier, responses, trackedEvent.EmoteId, trackedEvent.RegexMatch);
 			} catch (Exception e) {
 				// TODO log client id, event identifier, and item
 				m_Logger.LogError(e, "Caught exception while responding to event");
@@ -144,6 +145,7 @@ public sealed class ClientEventService : IDisposable {
 		public Emzi0767.Optional<BotsomeItem?> BotsomeItem { get; private set; } = Emzi0767.Optional<BotsomeItem?>.Default;
 		public List<DateTime> ReportedAt { get; } = new();
 		public ulong? EmoteId { get; private set; }
+		public Match? RegexMatch { get; private set; }
 
 		public TrackedEvent(ClientEventService clientEventService, TimeSpan respondAfter, EventIdentifier eventIdentifier) {
 			m_ClientEventService = clientEventService;
@@ -214,7 +216,8 @@ public sealed class ClientEventService : IDisposable {
 			ReportedAt.Add(DateTime.UtcNow);
 			
 			if (!BotsomeItem.HasValue && reportedEvent.EventArgs.Message.Content != null) {
-				BotsomeItem = m_ClientEventService.m_ItemsService.GetItem(reportedEvent.EventArgs, out ulong? emoteId);
+				BotsomeItem = m_ClientEventService.m_ItemsService.GetItem(reportedEvent.EventArgs, out ulong? emoteId, out Match? match);
+				RegexMatch ??= match;
 				EmoteId ??= emoteId;
 			}
 

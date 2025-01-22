@@ -12,7 +12,7 @@ namespace Botsome;
 /// Provides BotsomeItems.
 /// </summary>
 public abstract class ItemsService {
-	public abstract BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId);
+	public abstract BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId, out Match? match);
 }
 
 public class ConfigItemsService : ItemsService, IDisposable {
@@ -43,15 +43,15 @@ public class ConfigItemsService : ItemsService, IDisposable {
 		});
 	}
 	
-	public override BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId) {
+	public override BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId, out Match? match) {
 		foreach (BotsomeItem item in m_Options.CurrentValue) {
-			if (item.Enabled && AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs, out emoteId)) {
+			if (item.Enabled && AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs, out emoteId, out match)) {
 				return item;
 			}
 		}
 
 		emoteId = null;
-
+		match = null;
 		return null;
 	}
 	
@@ -99,21 +99,36 @@ public class ConfigItemsService : ItemsService, IDisposable {
 		return true;
 	}
 
-	private static bool ItemIsMatch(BotsomeItem item, MessageCreateEventArgs eventArgs, out ulong? emoteId) {
+	private static bool ItemIsMatch(BotsomeItem item, MessageCreateEventArgs eventArgs, out ulong? emoteId, out Match? match) {
 		switch (item.Trigger.Type) {
 			case TriggerType.MessageContent:
 				emoteId = null;
-				return (item.Trigger.UserIds == null || item.Trigger.UserIds.Contains(eventArgs.Author.Id)) && (item.Trigger.ActualMessageRegex == null || item.Trigger.ActualMessageRegex.IsMatch(eventArgs.Message.Content));
+				if (item.Trigger.UserIds == null || item.Trigger.UserIds.Contains(eventArgs.Author.Id)) {
+					if (item.Trigger.ActualMessageRegex == null) {
+						match = null;
+						return true;
+					} else {
+						match = item.Trigger.ActualMessageRegex.Match(eventArgs.Message.Content);
+						if (!match.Success) {
+							match = null;
+						}
+						return match != null;
+					}
+				} else {
+					match = null;
+					return false;
+				}
 			case TriggerType.EmoteNameAsMessage: {
-				foreach (Match match in EmoteRegex.Matches(eventArgs.Message.Content)) {
-					string emoteName = match.Groups["name"].Value;
+				match = null;
+				foreach (Match emoteMatch in EmoteRegex.Matches(eventArgs.Message.Content)) {
+					string emoteName = emoteMatch.Groups["name"].Value;
 					int tildeIndex = emoteName.IndexOf('~');
 					if (tildeIndex != -1) {
 						emoteName = emoteName[..(tildeIndex - 1)];
 					}
 
 					if (item.Trigger.ActualEmoteNameRegex!.IsMatch(emoteName)) {
-						emoteId = ulong.Parse(match.Groups["id"].Value);
+						emoteId = ulong.Parse(emoteMatch.Groups["id"].Value);
 						return true;
 					}
 				}
@@ -122,6 +137,7 @@ public class ConfigItemsService : ItemsService, IDisposable {
 				return false;
 			}
 			default:
+				match = null;
 				emoteId = null;
 				return false;
 		}

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using Microsoft.Extensions.DependencyInjection;
@@ -104,7 +105,7 @@ public class BotsomeClient : IAsyncDisposable {
 		m_OnChangeListener.Dispose();
 	}
 
-	public async Task RespondAsync(EventIdentifier eventIdentifier, IEnumerable<BotsomeResponse> responses, ulong? emoteId) {
+	public async Task RespondAsync(EventIdentifier eventIdentifier, IEnumerable<BotsomeResponse> responses, ulong? emoteId, Match? regexMatch) {
 		DiscordChannel channel = await m_Discord.GetChannelAsync(eventIdentifier.ChannelId);
 		foreach (BotsomeResponse response in responses) {
 			DiscordEmoji? discordEmoji = null;
@@ -128,7 +129,14 @@ public class BotsomeClient : IAsyncDisposable {
 					await channel.SendMessageAsync(discordEmoji);
 					break;
 				case ResponseType.Message:
-					await channel.SendMessageAsync(dmb => dmb.WithContent(response.Response).WithReply(eventIdentifier.MessageId, false, false));
+					string responseMessage = response.Response;
+					if (regexMatch != null) {
+						foreach (Group group in regexMatch.Groups.Cast<Group>()) {
+							responseMessage = responseMessage.Replace($"{{{group.Name}}}", group.Value);
+						}
+					}
+					
+					await channel.SendMessageAsync(dmb => dmb.WithContent(responseMessage).WithReply(eventIdentifier.MessageId, false, false));
 					break;
 				case ResponseType.Notification:
 					await Task.Run(() => m_NotificationService.SendNotification($"A botsome item was triggered by {eventIdentifier.ChannelId}/{eventIdentifier.MessageId} {response.Response}"));
