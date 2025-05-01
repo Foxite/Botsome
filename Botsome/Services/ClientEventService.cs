@@ -93,7 +93,7 @@ public sealed class ClientEventService : IDisposable {
 			m_TrackedEvents.AddOrUpdate(
 				reportedEvent.GetIdentifier(),
 				identifier => {
-					m_Logger.LogTrace("Open");
+					m_Logger.LogTrace("Open {RespondAfter}", m_RandomResponseTime.TotalMilliseconds);
 					var ret = new TrackedEvent(this, m_RandomResponseTime, identifier);
 					ret.AddReporter(reportedEvent);
 					return ret;
@@ -103,20 +103,20 @@ public sealed class ClientEventService : IDisposable {
 		}
 	}
 
-	private void Respond(BotsomeClient client, EventIdentifier eventIdentifier, TrackedEvent trackedEvent, IEnumerable<BotsomeResponse> responses) {
+	private void Respond(BotsomeClient client, EventIdentifier eventIdentifier, ItemsService.ItemResult itemResult, IEnumerable<BotsomeResponse> responses) {
 		m_Logger.LogTrace("Respond");
 
-		if (m_Random.NextDouble() > trackedEvent.BotsomeItem.Value!.Trigger.Probability) {
+		if (m_Random.NextDouble() > itemResult.Item.Trigger.Probability) {
 			m_Logger.LogTrace("Probability miss");
 			return;
 		}
 		
 		Task.Run(async () => {
 			try {
-				await client.RespondAsync(eventIdentifier, responses, trackedEvent.EmoteId, trackedEvent.RegexMatch);
+				await client.RespondAsync(eventIdentifier, responses, itemResult.EmoteId, itemResult.RegexMatch);
 			} catch (Exception e) {
 				// TODO log client id, event identifier, and item
-				m_Logger.LogError(e, "Caught exception while responding to event");
+				m_Logger.LogError(e, "Caught exception while responding to event, {ClientId} {EventId} {Item}", client.Bot.Id, eventIdentifier, itemResult.Item);
 			}
 		});
 	}
@@ -140,12 +140,8 @@ public sealed class ClientEventService : IDisposable {
 		private readonly Timer m_RespondTimer;
 		private readonly List<BotsomeClient> m_Reporters = new();
 
-		// Optional: has a value if ItemsService.GetItem has been called.
-		// Value: the return value of GetItem
-		public Emzi0767.Optional<BotsomeItem?> BotsomeItem { get; private set; } = Emzi0767.Optional<BotsomeItem?>.Default;
+		public ICollection<ItemsService.ItemResult>? BotsomeItems { get; private set; }
 		public List<DateTime> ReportedAt { get; } = new();
-		public ulong? EmoteId { get; private set; }
-		public Match? RegexMatch { get; private set; }
 
 		public TrackedEvent(ClientEventService clientEventService, TimeSpan respondAfter, EventIdentifier eventIdentifier) {
 			m_ClientEventService = clientEventService;
@@ -161,47 +157,50 @@ public sealed class ClientEventService : IDisposable {
 		private void Elapsed(object? sender, ElapsedEventArgs e) {
 			m_ClientEventService.m_Logger.LogTrace("Close {Count}", m_Reporters.Count);
 			m_RespondTimer.Dispose();
-			if (BotsomeItem.HasValue && BotsomeItem.Value != null) {
+			if (BotsomeItems == null) {
+				m_ClientEventService.m_Logger.LogTrace("Unable to find match, no reporters have Message Content access");
+				return;
+			}
+			
+			foreach (ItemsService.ItemResult itemResult in BotsomeItems) {
 				List<BotsomeResponse> responses;
-				if (BotsomeItem.Value.ResponseSelection == ResponseSelection.All) {
-					responses = BotsomeItem.Value.Responses;
-				} else if (BotsomeItem.Value.ResponseSelection == ResponseSelection.Random) {
+				if (itemResult.Item.ResponseSelection == ResponseSelection.All) {
+					responses = itemResult.Item.Responses;
+				} else if (itemResult.Item.ResponseSelection == ResponseSelection.Random) {
 					responses = new List<BotsomeResponse>() {
-						BotsomeItem.Value.Responses[m_ClientEventService.m_Random.Next(0, BotsomeItem.Value.Responses.Count)]
+						itemResult.Item.Responses[m_ClientEventService.m_Random.Next(0, itemResult.Item.Responses.Count)]
 					};
 				} else {
-					m_ClientEventService.m_Logger.LogCritical("Encountered invalid ResponseSelection {ResponseSelection}", BotsomeItem.Value.ResponseSelection);
+					m_ClientEventService.m_Logger.LogCritical("Encountered invalid ResponseSelection {ResponseSelection}", itemResult.Item.ResponseSelection);
 					throw new Exception("What the fuck");
 				}
 				
 				List<(BotsomeClient Client, ICollection<BotsomeResponse> Responses)> eligibleResponders = m_Reporters
-					.Select(reporter => (Client: reporter, Responses: reporter.CanRespond(BotsomeItem.Value, responses)))
+					.Select(reporter => (Client: reporter, Responses: reporter.CanRespond(itemResult.Item, responses)))
 					.Where(tuple => tuple.Responses.Count > 0)
 					.ToList();
 
 				if (eligibleResponders.Count == 0) {
 					m_ClientEventService.m_Logger.LogTrace("No eligible responders");
-					return;
+					continue;
 				}
 
-				if (BotsomeItem.Value.RespondMode == BotSelection.All) {
+				if (itemResult.Item.RespondMode == BotSelection.All) {
 					foreach ((BotsomeClient selectedClient, ICollection<BotsomeResponse> selectedResponses) in eligibleResponders) {
-						m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this, selectedResponses);
+						m_ClientEventService.Respond(selectedClient, m_EventIdentifier, itemResult, selectedResponses);
 					}
-				} else if (BotsomeItem.Value.RespondMode == BotSelection.Random) {
+				} else if (itemResult.Item.RespondMode == BotSelection.Random) {
 					int index = m_ClientEventService.m_Random.Next(0, eligibleResponders.Count);
 					(BotsomeClient selectedClient, ICollection<BotsomeResponse> selectedResponses) = eligibleResponders[index];
-					m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this, selectedResponses);
-				} else if (BotsomeItem.Value.RespondMode == BotSelection.RandomPerResponse) {
+					m_ClientEventService.Respond(selectedClient, m_EventIdentifier, itemResult, selectedResponses);
+				} else if (itemResult.Item.RespondMode == BotSelection.RandomPerResponse) {
 					// Note: if ResponseSelection is Random, it will be ignored; a warning will have been emitted by ConfigItemsService
-					foreach (BotsomeResponse response in BotsomeItem.Value.Responses) {
+					foreach (BotsomeResponse response in itemResult.Item.Responses) {
 						int index = m_ClientEventService.m_Random.Next(0, eligibleResponders.Count);
 						(BotsomeClient selectedClient, ICollection<BotsomeResponse> selectedResponses) = eligibleResponders[index];
-						m_ClientEventService.Respond(selectedClient, m_EventIdentifier, this, new[] { response });
+						m_ClientEventService.Respond(selectedClient, m_EventIdentifier, itemResult, new[] { response });
 					}
 				}
-			} else {
-				m_ClientEventService.m_Logger.LogTrace("No match");
 			}
 		}
 
@@ -215,19 +214,17 @@ public sealed class ClientEventService : IDisposable {
 		public void AddReporter(ReportedEvent reportedEvent) {
 			ReportedAt.Add(DateTime.UtcNow);
 			
-			if (!BotsomeItem.HasValue && reportedEvent.EventArgs.Message.Content != null) {
-				BotsomeItem = m_ClientEventService.m_ItemsService.GetItem(reportedEvent.EventArgs, out ulong? emoteId, out Match? match);
-				RegexMatch ??= match;
-				EmoteId ??= emoteId;
+			if (BotsomeItems == null && reportedEvent.EventArgs.Message.Content != null) {
+				BotsomeItems = m_ClientEventService.m_ItemsService.GetItem(reportedEvent.EventArgs);
 			}
 
-			if (BotsomeItem.HasValue && BotsomeItem.Value == null) {
+			if (BotsomeItems != null && BotsomeItems.Count == 0) {
 				StopTimer();
 				m_ClientEventService.m_Logger.LogTrace("No match");
 				return;
 			}
 
-			Debug.Assert(BotsomeItem == null || BotsomeItem.HasValue);
+			Debug.Assert(BotsomeItems == null || BotsomeItems.Count > 0);
 
 			m_Reporters.Add(reportedEvent.Client);
 		}

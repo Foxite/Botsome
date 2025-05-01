@@ -12,7 +12,9 @@ namespace Botsome;
 /// Provides BotsomeItems.
 /// </summary>
 public abstract class ItemsService {
-	public abstract BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId, out Match? match);
+	public abstract ICollection<ItemResult> GetItem(MessageCreateEventArgs eventArgs);
+	
+	public record ItemResult(BotsomeItem Item, ulong? EmoteId, Match? RegexMatch);
 }
 
 public class ConfigItemsService : ItemsService, IDisposable {
@@ -43,16 +45,16 @@ public class ConfigItemsService : ItemsService, IDisposable {
 		});
 	}
 	
-	public override BotsomeItem? GetItem(MessageCreateEventArgs eventArgs, out ulong? emoteId, out Match? match) {
+	public override ICollection<ItemResult> GetItem(MessageCreateEventArgs eventArgs) {
+		var results = new List<ItemResult>();
+		
 		foreach (BotsomeItem item in m_Options.CurrentValue) {
-			if (item.Enabled && AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs, out emoteId, out match)) {
-				return item;
+			if (item.Enabled && AllowChannel(item, eventArgs.Channel) && ItemIsMatch(item, eventArgs, out ulong? emoteId, out Match? match)) {
+				results.Add(new ItemResult(item, emoteId, match));
 			}
 		}
 
-		emoteId = null;
-		match = null;
-		return null;
+		return results;
 	}
 	
 	private bool AllowChannel(BotsomeItem item, DiscordChannel channel) {
