@@ -1,10 +1,16 @@
 using Botsome;
 using Docker.DotNet;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args);
+
+builder.ConfigureAppConfiguration((hbc, icb) => {
+	icb.AddYamlFile("appsettings.yaml", true);
+	icb.AddYamlFile($"appsettings.{hbc.HostingEnvironment.EnvironmentName}.yaml", true);
+});
 
 builder.ConfigureServices((hbc, isc) => {
 	isc.AddSingleton<Random>();

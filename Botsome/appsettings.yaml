@@ -1,0 +1,108 @@
+Logging:
+  LogLevel:
+    Botsome.ClientEventService: Trace
+
+Botsome:
+  RandomResponseTimeSeconds: 1.5
+  RandomResponseTimeMode: Auto
+  IgnoredRoles:
+    - 1052593923635281900
+
+Status:
+  Groups:
+    all:
+      - Type: Playing
+        Message: Status go here
+    g3:
+      - Type: Watching
+        Message: YAML!
+
+Items:
+  - Trigger:
+      Type: EmoteNameAsMessage
+      EmoteNameRegex: botsome
+    RespondMode: All
+    RespondGroup: all
+    Responses:
+      - Type: EmoteNameAsReaction
+        Response: botsome
+
+  - Trigger:
+      Type: MessageContent
+      MessageRegex: "\\bsus\\b"
+      OnlyInChannels:
+        - 880203972596617200
+    RespondMode: All
+    RespondGroup: all
+    Responses:
+      - Type: Message
+        Response: sus
+
+  - Trigger:
+      Type: MessageContent
+      MessageRegex: "\U0001F98A"
+    RespondMode: Random
+    RespondGroup: all
+    Responses:
+      - Type: Message
+        Response: fox
+
+  - Trigger:
+      Type: MessageContent
+      Probability: 0.5
+    RespondMode: All
+    RespondGroup: all
+    Responses:
+      - Type: Message
+        Response: yoo
+
+  - Trigger:
+      Type: EmoteNameAsMessage
+      EmoteNameRegex: flushedfish
+    RespondMode: Random
+    RespondGroup: all
+    Responses:
+      - Type: EmoteNameAsMessage
+        Response: flushedfish
+
+  - Trigger:
+      Type: MessageContent
+      MessageRegex: alphabet
+    RespondMode: Random
+    RespondGroup: all
+    ResponseSelection: All
+    Responses:
+      - Type: Message
+        Response: a
+      - Type: Message
+        Response: b
+      - Type: Message
+        Response: c
+      - Type: Message
+        Response: d
+
+  - Trigger:
+      Type: MessageContent
+      MessageRegex: betalpha
+    RespondMode: Random
+    RespondGroup: all
+    ResponseSelection: Random
+    Responses:
+      - Type: Message
+        Response: a
+      - Type: Message
+        Response: b
+      - Type: Message
+        Response: c
+      - Type: Message
+        Response: d
+
+  - Trigger:
+      Type: MessageContent
+      MessageRegex: "^i'?m (?<dad>.+)$"
+    RespondMode: Random
+    RespondGroup: all
+    ResponseSelection: Random
+    Responses:
+      - Type: Message
+        Response: Hi {dad}, I'm bot
