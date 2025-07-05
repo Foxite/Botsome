@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 IHostBuilder builder = Host.CreateDefaultBuilder(args);
 
 builder.ConfigureAppConfiguration((hbc, icb) => {
-	icb.AddYamlFile("appsettings.yaml", true);
-	icb.AddYamlFile($"appsettings.{hbc.HostingEnvironment.EnvironmentName}.yaml", true);
+	icb.AddYamlFile("appsettings.yaml", true, true);
+	icb.AddYamlFile($"appsettings.{hbc.HostingEnvironment.EnvironmentName}.yaml", true, true);
 });
 
 builder.ConfigureServices((hbc, isc) => {
