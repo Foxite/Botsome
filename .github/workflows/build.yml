@@ -9,7 +9,7 @@ env:
   REGISTRY: ghcr.io/Foxite
   IMAGE_NAME: botsome
   BUILD_CONTEXT: Botsome
-  DOCKERFILE: Dockerfile
+  DOCKERFILE: Botsome/Dockerfile
   GLUE_KEY_ALG: ES512
   GLUE_KEY_ID: Botsome
 
