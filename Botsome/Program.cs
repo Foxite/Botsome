@@ -24,7 +24,7 @@ builder.ConfigureServices((hbc, isc) => {
 	isc.Configure<List<BotsomeItem>>(hbc.Configuration.GetSection("Items"));
 	isc.Configure<NotificationService.Config>(hbc.Configuration.GetSection("Notifications"));
 
-	isc.AddSingleton(isp => {
+	isc.AddSingleton(() => {
 		var dockerConfig = new DockerClientConfiguration();
 		return dockerConfig.CreateClient();
 	});

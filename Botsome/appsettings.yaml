@@ -106,3 +106,15 @@ Items:
     Responses:
       - Type: Message
         Response: Hi {dad}, I'm bot
+
+  - Trigger:
+      Type: MessageContent
+      MessageRegex: "^test$"
+      ReplyToUserIds:
+        - 133798410024255488
+    RespondMode: Random
+    RespondGroup: all
+    ResponseSelection: Random
+    Responses:
+      - Type: Message
+        Response: check

@@ -105,7 +105,8 @@ public class ConfigItemsService : ItemsService, IDisposable {
 		switch (item.Trigger.Type) {
 			case TriggerType.MessageContent:
 				emoteId = null;
-				if (item.Trigger.UserIds == null || item.Trigger.UserIds.Contains(eventArgs.Author.Id)) {
+				if ((item.Trigger.UserIds == null || item.Trigger.UserIds.Contains(eventArgs.Author.Id)) &&
+					(item.Trigger.ReplyToUserIds == null || item.Trigger.ReplyToUserIds.Intersect(eventArgs.MentionedUsers.Select(user => user.Id)).Any() || (eventArgs.Message.ReferencedMessage != null && item.Trigger.ReplyToUserIds.Contains(eventArgs.Message.ReferencedMessage.Author.Id)))) {
 					if (item.Trigger.ActualMessageRegex == null) {
 						match = null;
 						return true;

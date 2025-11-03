@@ -17,6 +17,7 @@ public class BotsomeTrigger {
 	public string? EmoteNameRegex { get; set; }
 	public bool CaseSensitiveRegex { get; set; } = false;
 	public List<ulong>? UserIds { get; set; }
+	public List<ulong>? ReplyToUserIds { get; set; }
 
 	public Regex? ActualMessageRegex => MessageRegex == null ? null : new Regex(MessageRegex, CaseSensitiveRegex ? RegexOptions.None : RegexOptions.IgnoreCase);
 	public Regex? ActualEmoteNameRegex => EmoteNameRegex == null ? null : new Regex(EmoteNameRegex, CaseSensitiveRegex ? RegexOptions.None : RegexOptions.IgnoreCase);
